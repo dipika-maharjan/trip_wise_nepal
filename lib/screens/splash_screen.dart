@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+
+import 'package:trip_wise_nepal/screens/first_onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -9,7 +12,21 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   @override
+  void initState() {
+    super.initState();
+    Timer(const Duration(seconds: 3), () {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => FirstOnboardingScreen(
+            onNext: () {
+              // navigate to second onboarding or home later
+            },
+          ),
+        ),
+      );
+    });
 
+  }
   Widget build(BuildContext context) {
     return Scaffold(
         body: Container(
@@ -17,9 +34,11 @@ class _SplashScreenState extends State<SplashScreen> {
             gradient: LinearGradient(
               colors: [
                 Color(0xFF00B99A),
-                Color(0xFF0C7272)
+                Color(0xFF0C7272),
               ],
               begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+
             ),
           ),
           child: Center(
