@@ -34,7 +34,7 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
               const SizedBox(height: 10),
               const Text(
                 "Access thousands of breathtaking destinations. "
-                    "Swipe, search, and get inspired with curated collections across Nepal.",
+                    "Swipe, search, and get inspired with curated destinations across Nepal.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 18,
@@ -67,7 +67,7 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
                           builder: (context) => const SecondOnboardingScreen()),
                     );
                   },
-                  text: "Next"),
+                  text: "Get Started"),
 
             ],
           ),
