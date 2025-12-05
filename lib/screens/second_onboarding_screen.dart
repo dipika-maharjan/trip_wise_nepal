@@ -13,119 +13,135 @@ class SecondOnboardingScreen extends StatefulWidget {
 class _SecondOnboardingScreenState extends State<SecondOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [ Color(0xFFB2DFDB),
-              Color(0xFFFFF3E0),],
+            colors: [
+              Color(0xFFB2DFDB),
+              Color(0xFFFFF3E0),
+            ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              //skip btn
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 80, right: 16),
-                    child: ElevatedButton(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Skip button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    ElevatedButton(
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
+                              builder: (context) => const LoginScreen()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
-
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                       ),
                       child: const Text(
                         "Skip",
                         style: TextStyle(fontSize: 16, color: Colors.black),
                       ),
                     ),
-                  ),
-                ],
-              ),
-
-
-              const SizedBox(height: 50),
-              const Text(
-                "Travel With Confidence",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  ],
                 ),
-              ),
 
-              const SizedBox(height: 10),
-              const Text(
-                "See honest reviews from a global community so you always know you’re booking the right place.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
+                const SizedBox(height: 30),
+
+                const Text(
+                  "Travel With Confidence",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                const Text(
+                  "See honest reviews from a global community so you always know you’re booking the right place.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
                     fontSize: 18,
                     height: 1.4,
-                    fontWeight: FontWeight.w300
+                    fontWeight: FontWeight.w300,
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 20),
-              Image.asset(
-                'assets/images/second_onboarding.png',
-              ),
+                const SizedBox(height: 30),
 
-              const SizedBox(height: 40),
-              const Text(
-                "Explore Nepal, TripWise!",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontStyle: FontStyle.italic,
+                // Responsive image
+                SizedBox(
+                  height: screenHeight * 0.35,
+                  child: Image.asset(
+                    'assets/images/second_onboarding.png',
+                    fit: BoxFit.contain,
+                  ),
                 ),
-              ),
 
+                const SizedBox(height: 30),
 
-              //back and next btn
-              const SizedBox(height: 40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 150,
-                    child: MyButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      text: "Back",
-                      color: Colors.teal,
+                const Text(
+                  "Explore Nepal, TripWise!",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                // Back + Next buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 140,
+                      child: MyButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        text: "Back",
+                        color: Colors.teal,
+                      ),
                     ),
-                  ),
 
+                    const SizedBox(width: 30),
 
-                  const SizedBox(width: 40),
-                  MyButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ThirdOnboardingScreen(),
-                        ),
-                      );
-                    },
-                    text: "Next",
-                    color: Colors.teal,
-                  ),
-                ],
-              ),
+                    SizedBox(
+                      width: 140,
+                      child: MyButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                              const ThirdOnboardingScreen(),
+                            ),
+                          );
+                        },
+                        text: "Next",
+                        color: Colors.teal,
+                      ),
+                    ),
+                  ],
+                ),
 
-
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
