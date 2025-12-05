@@ -15,13 +15,15 @@ class MyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
+    return SizedBox(
+      width: 250,
+      child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-            backgroundColor: color ?? Colors.teal,
-            padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 10
-            )
+          backgroundColor: color ?? Colors.teal,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 10,
+          ),
         ),
         onPressed: onPressed,
         child: Text(
@@ -30,7 +32,9 @@ class MyButton extends StatelessWidget {
             color: Colors.white,
             fontSize: 20,
           ),
-        )
+        ),
+      ),
     );
   }
+
 }
