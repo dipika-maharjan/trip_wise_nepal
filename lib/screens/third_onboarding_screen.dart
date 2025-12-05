@@ -14,11 +14,48 @@ class _ThirdOnboardingScreenState extends State<ThirdOnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [ Color(0xFFB2DFDB),
+              Color(0xFFFFF3E0),],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              const SizedBox(height: 100),
+              //skip btn
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 80, right: 16),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text(
+                        "Skip",
+                        style: TextStyle(fontSize: 16, color: Colors.black),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+
+              const SizedBox(height: 50),
               const Text(
                 "Plan, Book, and Review",
                 style: TextStyle(
@@ -54,16 +91,37 @@ class _ThirdOnboardingScreenState extends State<ThirdOnboardingScreen> {
               ),
 
 
+              //back and next btn
               const SizedBox(height: 40),
-              MyButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const LoginScreen()),
-                    );
-                  },
-                  text: "Next"),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 150,
+                    child: MyButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      text: "Back",
+                      color: Colors.teal,
+                    ),
+                  ),
+
+                  const SizedBox(width: 40),
+                  MyButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      );
+                    },
+                    text: "Next",
+                    color: Colors.teal,
+                  ),
+                ],
+              ),
 
             ],
           ),

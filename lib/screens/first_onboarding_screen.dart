@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trip_wise_nepal/screens/login_screen.dart';
 import 'package:trip_wise_nepal/screens/second_onboarding_screen.dart';
 import 'package:trip_wise_nepal/widgets/my_button.dart';
 
@@ -18,11 +19,48 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [ Color(0xFFB2DFDB),
+              Color(0xFFFFF3E0),],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              const SizedBox(height: 100),
+              //skip btn
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 80, right: 16),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text(
+                        "Skip",
+                        style: TextStyle(fontSize: 16, color: Colors.black),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+
+              const SizedBox(height: 50),
               const Text(
                 "Discover Your Next Destination",
                 style: TextStyle(
@@ -57,17 +95,26 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
               ),
               ),
 
-              
+              // get started btn
               const SizedBox(height: 40),
-              MyButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const SecondOnboardingScreen()),
-                    );
-                  },
-                  text: "Get Started"),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(width: 40),
+                  MyButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SecondOnboardingScreen(),
+                        ),
+                      );
+                    },
+                    text: "Get Started",
+                    color: Colors.teal,
+                  ),
+                ],
+              ),
 
             ],
           ),
