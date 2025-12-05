@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/screens/home_screen.dart';
-import 'package:trip_wise_nepal/screens/register_screen.dart';
+import 'package:trip_wise_nepal/screens/login_screen.dart';
 import 'package:trip_wise_nepal/widgets/my_button.dart';
 import 'package:trip_wise_nepal/widgets/my_text_field.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
 
@@ -22,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     emailController.dispose();
     passwordController.dispose();
+    confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -51,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Title
                 Center(
                   child: Text(
-                    "Login to your account",
+                    "Create new account",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.teal,
@@ -78,38 +79,31 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelText: "Password",
                   errorMessage: "Please enter your password",
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 25),
 
-                // Forgot password
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      "Forgot Password?",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.teal,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                // Confrm Password field
+                MyTextField(
+                  controller: confirmPasswordController,
+                  hintText: "Enter your password",
+                  labelText: "Confirm Password",
+                  errorMessage: "Please enter your password",
                 ),
+                const SizedBox(height: 30),
 
-                const SizedBox(height: 40),
 
-                // Login button
+                // Register button
                 Center(
                   child: SizedBox(
                     width: 250,
                     child: MyButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const HomeScreen()),
-                        );
-                      },
-                        text: "Login"),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const LoginScreen()),
+                          );
+                        },
+                        text: "Register"),
                   ),
                 ),
 
@@ -183,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      "Don't have an account? ",
+                      "Already have an account? ",
                       style: TextStyle(
                         fontSize: 18,
                       ),
@@ -192,11 +186,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                          MaterialPageRoute(builder: (context) => const LoginScreen()),
                         );
                       },
                       child: const Text(
-                        "Register",
+                        "Login",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
