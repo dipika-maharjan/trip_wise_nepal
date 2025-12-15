@@ -14,12 +14,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 8), () {
+    Timer(const Duration(seconds: 3), () {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => FirstOnboardingScreen(
             onNext: () {
-              // navigate to second onboarding or home later
             },
           ),
         ),

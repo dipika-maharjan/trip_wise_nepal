@@ -14,28 +14,23 @@ class FirstOnboardingScreen extends StatefulWidget {
 class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        width: double.infinity,
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFFB2DFDB),
-              Color(0xFFFFF3E0),
-            ],
+            colors: [Color(0xFFB2DFDB), Color(0xFFFFF3E0)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Skip
-                Row(
+          child: Column(
+            children: [
+              // Skip button
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     ElevatedButton(
@@ -43,88 +38,106 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
+                              builder: (context) => const LoginScreen()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(80, 40),
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
+                            horizontal: 20, vertical: 12),
                       ),
                       child: const Text(
                         "Skip",
-                        style: TextStyle(fontSize: 16, color: Colors.black),
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                     ),
                   ],
                 ),
+              ),
 
-                const SizedBox(height: 30),
 
-                const Text(
-                  "Discover Your Next Destination",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                const Text(
-                  "Access thousands of breathtaking destinations. "
-                      "Swipe, search, and get inspired with curated destinations across Nepal.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 18,
-                    height: 1.4,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // Auto-resizing image
-                SizedBox(
-                  height: screenHeight * 0.35,
-                  child: Image.asset(
-                    'assets/images/first_onboarding.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                const Text(
-                  "Explore Nepal, TripWise!",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                MyButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                        const SecondOnboardingScreen(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 20),
+                      const Text(
+                        "Discover Your Next Destination",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    );
-                  },
-                  text: "Get Started",
-                  color: Colors.teal,
-                ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Access thousands of breathtaking destinations. "
+                            "Swipe, search, and get inspired with curated destinations across Nepal.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          height: 1.4,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                      const SizedBox(height: 25),
 
-                const SizedBox(height: 20),
-              ],
-            ),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: 400,
+                            minWidth: 200,
+                          ),
+                          child: Image.asset(
+                            'assets/images/first_onboarding.png',
+                            width: double.infinity,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+
+
+                      const SizedBox(height: 20),
+                      const Text(
+                        "Explore Nepal, TripWise!",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+
+
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 100),
+                child: Center(
+                  child: SizedBox(
+                    width: 300,
+                    height: 55,
+                    child: MyButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                              const SecondOnboardingScreen()),
+                        );
+                      },
+                      text: "Get Started",
+                      color: Colors.teal,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

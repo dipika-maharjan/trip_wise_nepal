@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/screens/home_screen.dart';
+import 'package:trip_wise_nepal/screens/bottom_screen/home_screen.dart';
+import 'package:trip_wise_nepal/screens/bottom_screen_layout.dart';
 import 'package:trip_wise_nepal/screens/register_screen.dart';
 import 'package:trip_wise_nepal/widgets/my_button.dart';
 import 'package:trip_wise_nepal/widgets/my_text_field.dart';
@@ -90,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const HomeScreen()),
+                            MaterialPageRoute(builder: (context) => const BottomScreenLayout()),
                           );
                         },
                         text: "Login",
