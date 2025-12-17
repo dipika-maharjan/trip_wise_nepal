@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 
-ThemeData getApplicationTheme(){
+ThemeData getApplicationTheme() {
   return ThemeData(
-  primarySwatch: Colors.teal,
-  scaffoldBackgroundColor: Colors.white,
-  fontFamily: 'Montserrat Regular',
+    primarySwatch: Colors.teal,
+    scaffoldBackgroundColor: Colors.white,
+    fontFamily: 'Montserrat-Regular',
+
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF136767),
+      foregroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: true,
+    ),
+
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF136767),
         textStyle: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontFamily: 'Montserrat-Regular',
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
         ),
-        backgroundColor: Color(0xFF136767),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadiusGeometry.circular(20),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     ),
