@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/screens/bottom_screen/booking_screen.dart';
-import 'package:trip_wise_nepal/screens/bottom_screen/home_screen.dart';
-import 'package:trip_wise_nepal/screens/bottom_screen/map_screen.dart';
-import 'package:trip_wise_nepal/screens/bottom_screen/profile_screen.dart';
+import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/booking_screen.dart';
+import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/home_screen.dart';
+import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/map_screen.dart';
+import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/profile_screen.dart';
 
 class BottomScreenLayout extends StatefulWidget {
   const BottomScreenLayout({super.key});

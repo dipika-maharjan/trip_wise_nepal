@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/screens/login_screen.dart';
-import 'package:trip_wise_nepal/screens/second_onboarding_screen.dart';
-import 'package:trip_wise_nepal/widgets/my_button.dart';
+import 'package:trip_wise_nepal/features/auth/presentation/pages/login_screen.dart';
+import 'package:trip_wise_nepal/core/widgets/my_button.dart';
 
-class FirstOnboardingScreen extends StatefulWidget {
-  final VoidCallback onNext;
-  const FirstOnboardingScreen({super.key, required this.onNext});
+class ThirdOnboardingScreen extends StatefulWidget {
+  const ThirdOnboardingScreen({super.key});
 
   @override
-  State<FirstOnboardingScreen> createState() => _FirstOnboardingScreenState();
+  State<ThirdOnboardingScreen> createState() => _ThirdOnboardingScreenState();
 }
 
-class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
+class _ThirdOnboardingScreenState extends State<ThirdOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -22,7 +20,7 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
         height: double.infinity,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: const AssetImage('assets/images/first-onboarding.png'),
+            image: const AssetImage('assets/images/third-onboarding.png'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
               Colors.black.withOpacity(0.4),
@@ -43,12 +41,14 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          MaterialPageRoute(
+                              builder: (context) => const LoginScreen()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(80, 40),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                         backgroundColor: Colors.teal[600],
                       ),
                       child: const Text(
@@ -60,7 +60,7 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
                 ),
               ),
 
-              // Centered content
+              // Centered content with buttons
               Expanded(
                 child: Center(
                   child: SingleChildScrollView(
@@ -69,7 +69,7 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
-                          "Discover Your Next Destination",
+                          "Plan, Book, and Review",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 28,
@@ -77,11 +77,10 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
                             color: Colors.white,
                           ),
                         ),
-
                         SizedBox(height: screenHeight * 0.03),
 
                         const Text(
-                          "Access thousands of breathtaking destinations. Swipe, search, and get inspired with curated destinations across Nepal.",
+                          "Your journey is simplified. Find, book, and share your accommodation details, all in one place.",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 18,
@@ -90,9 +89,10 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
                             color: Colors.white70,
                           ),
                         ),
+                        SizedBox(height: screenHeight * 0.05),
 
-                        SizedBox(height: screenHeight * 0.03),
 
+                        const SizedBox(height: 20),
                         const Text(
                           "Explore Nepal, TripWise!",
                           textAlign: TextAlign.center,
@@ -105,19 +105,39 @@ class _FirstOnboardingScreenState extends State<FirstOnboardingScreen> {
 
                         SizedBox(height: screenHeight * 0.05),
 
-                        SizedBox(
-                          height: 50,
-                          width: 250,
-                          child: MyButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const SecondOnboardingScreen()),
-                              );
-                            },
-                            text: "Get Started",
-                            color: Colors.teal[600],
-                          ),
+                        // Back + Next btn
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 140,
+                              height: 50,
+                              child: MyButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                text: "Back",
+                                color: Colors.teal[600],
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            SizedBox(
+                              width: 140,
+                              height: 50,
+                              child: MyButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                        const LoginScreen()),
+                                  );
+                                },
+                                text: "Next",
+                                color: Colors.teal[600],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/widgets/home_card.dart';
-import 'package:trip_wise_nepal/widgets/search_field.dart';
+import 'package:trip_wise_nepal/core/widgets/home_card.dart';
+import 'package:trip_wise_nepal/core/widgets/search_field.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

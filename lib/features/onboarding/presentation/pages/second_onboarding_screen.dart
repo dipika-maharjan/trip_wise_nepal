@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/screens/login_screen.dart';
-import 'package:trip_wise_nepal/widgets/my_button.dart';
+import 'package:trip_wise_nepal/features/auth/presentation/pages/login_screen.dart';
+import 'package:trip_wise_nepal/features/onboarding/presentation/pages/third_onboarding_screen.dart';
+import 'package:trip_wise_nepal/core/widgets/my_button.dart';
 
-class ThirdOnboardingScreen extends StatefulWidget {
-  const ThirdOnboardingScreen({super.key});
+class SecondOnboardingScreen extends StatefulWidget {
+  const SecondOnboardingScreen({super.key});
 
   @override
-  State<ThirdOnboardingScreen> createState() => _ThirdOnboardingScreenState();
+  State<SecondOnboardingScreen> createState() => _SecondOnboardingScreenState();
 }
 
-class _ThirdOnboardingScreenState extends State<ThirdOnboardingScreen> {
+class _SecondOnboardingScreenState extends State<SecondOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -20,7 +21,7 @@ class _ThirdOnboardingScreenState extends State<ThirdOnboardingScreen> {
         height: double.infinity,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: const AssetImage('assets/images/third-onboarding.png'),
+            image: const AssetImage('assets/images/second-onboarding.png'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
               Colors.black.withOpacity(0.4),
@@ -69,7 +70,7 @@ class _ThirdOnboardingScreenState extends State<ThirdOnboardingScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
-                          "Plan, Book, and Review",
+                          "Travel With Confidence",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 28,
@@ -80,7 +81,7 @@ class _ThirdOnboardingScreenState extends State<ThirdOnboardingScreen> {
                         SizedBox(height: screenHeight * 0.03),
 
                         const Text(
-                          "Your journey is simplified. Find, book, and share your accommodation details, all in one place.",
+                          "See honest reviews from a global community so you always know you’re booking the right place.",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 18,
@@ -130,7 +131,7 @@ class _ThirdOnboardingScreenState extends State<ThirdOnboardingScreen> {
                                     context,
                                     MaterialPageRoute(
                                         builder: (context) =>
-                                        const LoginScreen()),
+                                        const ThirdOnboardingScreen()),
                                   );
                                 },
                                 text: "Next",

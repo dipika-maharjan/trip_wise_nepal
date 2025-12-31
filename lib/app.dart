@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/theme/theme_data.dart';
-import 'screens/splash_screen.dart';
+import 'package:trip_wise_nepal/app/theme/theme_data.dart';
+import 'features/splash/presentation/pages/splash_screen.dart';
 
 void main() {
   runApp(const MyApp());

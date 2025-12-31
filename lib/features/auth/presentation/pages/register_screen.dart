@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/screens/login_screen.dart';
-import 'package:trip_wise_nepal/widgets/my_button.dart';
-import 'package:trip_wise_nepal/widgets/my_text_field.dart';
+import 'package:trip_wise_nepal/features/auth/presentation/pages/login_screen.dart';
+import 'package:trip_wise_nepal/core/widgets/my_button.dart';
+import 'package:trip_wise_nepal/core/widgets/my_text_field.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
