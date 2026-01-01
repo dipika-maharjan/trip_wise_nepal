@@ -5,10 +5,21 @@ import 'package:trip_wise_nepal/features/auth/data/models/auth_hive_model.dart';
 import 'package:path_provider/path_provider.dart';
 
 final hiveServiceProvider = Provider<HiveService>((ref) {
-  return HiveService();
+  return HiveService.instance;
 });
 
 class HiveService {
+  // Singleton instance
+  static final HiveService _instance = HiveService._internal();
+
+  HiveService._internal();
+
+  factory HiveService() {
+    return _instance;
+  }
+
+  static HiveService get instance => _instance;
+
   // init
   Future<void> init() async {
     final directory = await getApplicationDocumentsDirectory();
