@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/home_screen.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/pages/register_screen.dart';
 import 'package:trip_wise_nepal/core/widgets/my_button.dart';
