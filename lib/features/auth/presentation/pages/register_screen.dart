@@ -11,6 +11,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
@@ -62,6 +63,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                           const SizedBox(height: 30),
+                          MyTextField(
+                            controller: nameController,
+                            hintText: "Enter your full name",
+                            labelText: "Full Name",
+                            errorMessage: "Please enter your full name",
+                          ),
+                          const SizedBox(height: 25),
                           MyTextField(
                             controller: emailController,
                             hintText: "Enter your email address",
