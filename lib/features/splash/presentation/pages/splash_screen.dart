@@ -1,31 +1,49 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:trip_wise_nepal/app/routes/app_routes.dart';
+import 'package:trip_wise_nepal/core/services/storage/user_session_service.dart';
+import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 import 'package:trip_wise_nepal/features/onboarding/presentation/pages/first_onboarding_screen.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 3), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => FirstOnboardingScreen(
-            onNext: () {
-            },
-          ),
+    _navigateToNext();
+  }
+
+  Future<void> _navigateToNext() async {
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+
+    // Check if user is already logged in
+    final userSessionService = ref.read(userSessionServiceProvider);
+    final isLoggedIn = userSessionService.isLoggedIn();
+
+    if (isLoggedIn) {
+      // Navigate to Dashboard if user is logged in
+      AppRoutes.pushAndRemoveUntil(context, const BottomScreenLayout());
+    } else {
+      // Navigate to Onboarding if user is not logged in
+      AppRoutes.pushAndRemoveUntil(
+        context,
+        FirstOnboardingScreen(
+          onNext: () {
+            
+          },
         ),
       );
-    });
-
+    }
   }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
         body: Container(

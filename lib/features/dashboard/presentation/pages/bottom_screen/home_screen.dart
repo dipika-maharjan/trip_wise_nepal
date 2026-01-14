@@ -13,7 +13,8 @@ class HomeScreen extends StatelessWidget {
         ? (screenWidth - 64) / 3 // 3 cards in a row for tablet
         : (screenWidth - 48) / 2; // 2 cards in a row for mobile
 
-    return SafeArea(
+    return Scaffold(
+      body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -83,6 +84,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 32),
           ],
         ),
+      ),
     );
   }
 }
