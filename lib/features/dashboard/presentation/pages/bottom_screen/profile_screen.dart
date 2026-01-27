@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:trip_wise_nepal/app/theme/app_colors.dart';
+import 'package:trip_wise_nepal/core/services/storage/user_session_service.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -10,11 +14,15 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  XFile? _selectedImage;
+  final ImagePicker _imagePicker = ImagePicker();
+
   @override
   Widget build(BuildContext context) {
-    // TODO: Get real user data from userSessionServiceProvider
-    final userName = 'Dipika Maharjan';
-    final userEmail = 'dipika@example.com';
+    final userSessionService = ref.watch(userSessionServiceProvider);
+    final userName = userSessionService.getCurrentUserFullName() ?? 'User';
+    final userEmail = userSessionService.getCurrentUserEmail() ?? '';
+    final profilePictureUrl = userSessionService.getCurrentUserProfilePicture();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -22,7 +30,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // ============= HEADER WITH GRADIENT =============
+              // header
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -45,12 +53,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                     const SizedBox(height: 32),
 
-                    // ============= PROFILE IMAGE WITH UPLOAD BUTTON =============
-                    _buildProfileImageSection(),
+                    // profile image with upload button
+                    _buildProfileImageSection(profilePictureUrl),
 
                     const SizedBox(height: 16),
 
-                    // ============= USER NAME =============
+                    // user name
                     Text(
                       userName,
                       style: const TextStyle(
@@ -61,7 +69,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // ============= USER EMAIL =============
+                    //user email
                     Text(
                       userEmail,
                       style: const TextStyle(
@@ -77,7 +85,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SizedBox(height: 24),
 
-              // ============= ACTION BUTTONS =============
+              
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
                 child: Column(
@@ -126,8 +134,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ============= PROFILE IMAGE WIDGET =============
-  Widget _buildProfileImageSection() {
+  //profile img
+  Widget _buildProfileImageSection(String? profilePictureUrl) {
     return Stack(
       children: [
         // Avatar Circle
@@ -146,26 +154,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ],
           ),
-          child: CircleAvatar(
-            radius: 60,
-            backgroundColor: Colors.white,
-            child: Icon(
-              Icons.person,
-              size: 60,
-              color: AppColors.primary,
-            ),
+          child: ClipOval(
+            child: _buildProfileImage(profilePictureUrl),
           ),
         ),
 
-        // Camera Button (Bottom Right)
+        //camera btn
         Positioned(
           bottom: 0,
           right: 0,
           child: GestureDetector(
-            onTap: () {
-              // TODO: Implement image picker
-              print('Camera button tapped');
-            },
+            onTap: _showImagePickerOptions,
             child: Container(
               width: 50,
               height: 50,
@@ -196,7 +195,229 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ============= MENU BUTTON WIDGET =============
+  //profile img display
+  Widget _buildProfileImage(String? profilePictureUrl) {
+    if (_selectedImage != null) {
+      return Image.file(
+        File(_selectedImage!.path),
+        width: 120,
+        height: 120,
+        fit: BoxFit.cover,
+      );
+    }
+
+    // Show server image if available
+    if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+      return Image.network(
+        profilePictureUrl,
+        width: 120,
+        height: 120,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+      );
+    }
+
+    // Show placeholder
+    return _buildPlaceholder();
+  }
+
+  Widget _buildPlaceholder() {
+    return CircleAvatar(
+      radius: 60,
+      backgroundColor: Colors.white,
+      child: Icon(
+        Icons.person,
+        size: 60,
+        color: AppColors.primary,
+      ),
+    );
+  }
+
+  //img picker options
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Choose Profile Picture',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImageFromCamera();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImageFromGallery();
+              },
+            ),
+            // Show remove option only if an image is selected
+            if (_selectedImage != null)
+              ListTile(
+                leading: const Icon(Icons.delete, color: AppColors.error),
+                title: const Text(
+                  'Remove Photo',
+                  style: TextStyle(color: AppColors.error),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _removeImage();
+                },
+              ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============= REMOVE IMAGE =============
+  void _removeImage() {
+    setState(() {
+      _selectedImage = null;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Photo removed')),
+    );
+  }
+
+  //permission request
+  Future<bool> _requestPermission(Permission permission) async {
+    final status = await permission.status;
+    
+    if (status.isGranted) {
+      return true;
+    } else if (status.isDenied) {
+      final result = await permission.request();
+      return result.isGranted;
+    }
+
+    if (status.isPermanentlyDenied) {
+      _showPermissionDeniedDialog();
+      return false;
+    }
+    
+    return false;
+  }
+
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text('Permission Required'),
+        content: const Text(
+          'Please grant the necessary permissions from settings to access this feature.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+            child: const Text(
+              'Open Settings',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  //pick from cam
+  Future<void> _pickImageFromCamera() async {
+    final hasPermission = await _requestPermission(Permission.camera);
+    if (!hasPermission) return;
+
+    try {
+      final XFile? photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+
+      if (photo != null) {
+        setState(() {
+          _selectedImage = photo;
+        });
+
+        // TODO: Upload to server
+        // await ref.read(authViewModelProvider.notifier).uploadProfileImage(File(photo.path));
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Image selected! Upload feature coming soon.')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Camera error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to take photo')),
+        );
+      }
+    }
+  }
+
+  // pick from gallery
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+        });
+
+        // TODO: Upload to server
+        // await ref.read(authViewModelProvider.notifier).uploadProfileImage(File(image.path));
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Image selected! Upload feature coming soon.')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Gallery error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to pick image from gallery')),
+        );
+      }
+    }
+  }
+
+  //menu btn
   Widget _buildMenuButton({
     required IconData icon,
     required String title,
@@ -267,7 +488,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ============= LOGOUT DIALOG =============
+  //logout dialog
   void _showLogoutDialog() {
     showDialog(
       context: context,
