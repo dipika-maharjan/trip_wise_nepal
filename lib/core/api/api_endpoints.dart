@@ -38,4 +38,7 @@ class ApiEndpoints {
   static const String logout = "/auth/logout";
   static String userById(String id) => '/auth/$id';
 
+  // Profile endpoints
+  static const String updateProfile = '/auth/update-profile';
+  static const String getProfile = '/auth/profile';
 }
