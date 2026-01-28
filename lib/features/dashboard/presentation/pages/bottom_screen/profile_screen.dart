@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:trip_wise_nepal/app/routes/app_routes.dart';
 import 'package:trip_wise_nepal/app/theme/app_colors.dart';
 import 'package:trip_wise_nepal/core/services/storage/user_session_service.dart';
+import 'package:trip_wise_nepal/features/auth/presentation/pages/login_screen.dart';
+import 'package:trip_wise_nepal/features/auth/presentation/view_model/auth_view_model.dart';
+import 'package:trip_wise_nepal/features/profile/presentation/view_model/profile_viewmodel.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -289,7 +293,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ============= REMOVE IMAGE =============
+  // remove img
   void _removeImage() {
     setState(() {
       _selectedImage = null;
@@ -366,13 +370,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _selectedImage = photo;
         });
 
-        // TODO: Upload to server
-        // await ref.read(authViewModelProvider.notifier).uploadProfileImage(File(photo.path));
-        
+        // Upload to server
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Image selected! Upload feature coming soon.')),
-          );
+          _uploadProfileImage(File(photo.path));
         }
       }
     } catch (e) {
@@ -398,13 +398,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _selectedImage = image;
         });
 
-        // TODO: Upload to server
-        // await ref.read(authViewModelProvider.notifier).uploadProfileImage(File(image.path));
-        
+        // Upload to server
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Image selected! Upload feature coming soon.')),
-          );
+          _uploadProfileImage(File(image.path));
         }
       }
     } catch (e) {
@@ -488,6 +484,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  // Upload profile image to server
+  void _uploadProfileImage(File imageFile) async {
+    final profileViewModel = ref.read(profileViewModelProvider.notifier);
+    
+    // Show loading dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // Upload img
+    await profileViewModel.uploadProfileImage(imageFile);
+
+    // Dismiss loading dialog
+    if (mounted) {
+      Navigator.pop(context);
+    }
+
+    // Watch the state to handle success/error
+    if (mounted) {
+      ref.listen(profileViewModelProvider, (previous, next) {
+        if (next.status.name == 'loaded' && next.imageUrl != null) {
+          //  Update user session with new image URL
+          final userSessionService = ref.read(userSessionServiceProvider);
+          userSessionService.updateUserProfilePicture(next.imageUrl!);
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile image updated successfully')),
+          );
+          
+          // Reset profile state
+          profileViewModel.resetState();
+        } else if (next.status.name == 'error') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(next.errorMessage ?? 'Failed to upload image')),
+          );
+          
+          // Reset profile state
+          profileViewModel.resetState();
+        }
+      });
+    }
+  }
+
   //logout dialog
   void _showLogoutDialog() {
     showDialog(
@@ -507,9 +552,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async{
               Navigator.pop(dialogContext);
-              // TODO: Implement logout
+              // Clear user session
+              await ref.read(authViewModelProvider.notifier).logout();
+              if (context.mounted) {
+                AppRoutes.pushAndRemoveUntil(context, const LoginScreen());
+              }
             },
             child: const Text(
               'Logout',
