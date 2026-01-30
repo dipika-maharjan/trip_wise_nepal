@@ -73,11 +73,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 
                 Padding(
                   padding: const EdgeInsets.all(12.0),
-                  child: Text(
-                      "Find Your Dream Destination With Us!",
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
+                  child: Center(
+                    child: Text(
+                        "Find Your Dream Destination With Us!",
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 )
