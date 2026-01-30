@@ -48,6 +48,7 @@ dependencies:
   pretty_dio_logger: ^1.4.0
   flutter_secure_storage: ^9.2.2  
   connectivity_plus: ^7.0.0
+  test_cov_console: ^0.2.2
 
 dev_dependencies:
   flutter_test:
