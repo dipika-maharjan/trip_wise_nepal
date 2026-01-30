@@ -18,11 +18,35 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+    bool _hasListener = false;
   XFile? _selectedImage;
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
   Widget build(BuildContext context) {
+        // Register ref.listen only once per widget lifecycle
+        if (!_hasListener) {
+          ref.listen(profileViewModelProvider, (previous, next) {
+            if (next.status.name == 'loaded' && next.imageUrl != null) {
+              final userSessionService = ref.read(userSessionServiceProvider);
+              userSessionService.updateUserProfilePicture(next.imageUrl!);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile image updated successfully')),
+                );
+              }
+              ref.read(profileViewModelProvider.notifier).resetState();
+            } else if (next.status.name == 'error') {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(next.errorMessage ?? 'Failed to upload image')),
+                );
+              }
+              ref.read(profileViewModelProvider.notifier).resetState();
+            }
+          });
+          _hasListener = true;
+        }
     final userSessionService = ref.watch(userSessionServiceProvider);
     final userName = userSessionService.getCurrentUserFullName() ?? 'User';
     final userEmail = userSessionService.getCurrentUserEmail() ?? '';
@@ -212,8 +236,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     // Show server image if available
     if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+      const String baseUrl = 'http://10.0.2.2:5050/uploads/';
+      final String imageUrl = profilePictureUrl.startsWith('http')
+          ? profilePictureUrl
+          : baseUrl + profilePictureUrl;
       return Image.network(
-        profilePictureUrl,
+        imageUrl,
         width: 120,
         height: 120,
         fit: BoxFit.cover,
@@ -487,7 +515,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // Upload profile image to server
   void _uploadProfileImage(File imageFile) async {
     final profileViewModel = ref.read(profileViewModelProvider.notifier);
-    
     // Show loading dialog
     if (mounted) {
       showDialog(
@@ -498,38 +525,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       );
     }
-
     // Upload img
     await profileViewModel.uploadProfileImage(imageFile);
-
     // Dismiss loading dialog
     if (mounted) {
       Navigator.pop(context);
-    }
-
-    // Watch the state to handle success/error
-    if (mounted) {
-      ref.listen(profileViewModelProvider, (previous, next) {
-        if (next.status.name == 'loaded' && next.imageUrl != null) {
-          //  Update user session with new image URL
-          final userSessionService = ref.read(userSessionServiceProvider);
-          userSessionService.updateUserProfilePicture(next.imageUrl!);
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile image updated successfully')),
-          );
-          
-          // Reset profile state
-          profileViewModel.resetState();
-        } else if (next.status.name == 'error') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(next.errorMessage ?? 'Failed to upload image')),
-          );
-          
-          // Reset profile state
-          profileViewModel.resetState();
-        }
-      });
     }
   }
 
