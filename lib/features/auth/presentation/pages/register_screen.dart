@@ -4,7 +4,6 @@ import 'package:trip_wise_nepal/features/auth/presentation/state/auth_state.dart
 import 'package:trip_wise_nepal/features/auth/presentation/view_model/auth_view_model.dart';
 import 'package:trip_wise_nepal/core/utils/snackbar_utils.dart';
 import 'package:trip_wise_nepal/app/routes/app_routes.dart';
-import 'login_screen.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -63,10 +62,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             profilePicture: '',
           );
     }
-  }
-
-  void _navigateToLogin() {
-    AppRoutes.pop(context);
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/pages/register_screen.dart';
+import 'package:trip_wise_nepal/features/auth/presentation/pages/forgot_password_screen.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/state/auth_state.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/view_model/auth_view_model.dart';
 import 'package:trip_wise_nepal/core/utils/snackbar_utils.dart';
@@ -50,7 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _handleForgotPassword() {
-    SnackbarUtils.showInfo(context, 'Forgot password feature coming soon');
+    AppRoutes.push(context, const ForgotPasswordScreen());
   }
 
   @override
