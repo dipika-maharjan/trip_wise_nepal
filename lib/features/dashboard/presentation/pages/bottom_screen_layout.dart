@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/booking_screen.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/home_screen.dart';
-import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/map_screen.dart';
+import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/accommodation_screen.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/profile_screen.dart';
 
 class BottomScreenLayout extends StatefulWidget {
@@ -16,7 +16,7 @@ class _BottomScreenLayoutState extends State<BottomScreenLayout> {
 
   List<Widget> lstBottomScreen = [
     const HomeScreen(),
-    const MapScreen(),
+    const AccommodationScreen(),
     const BookingScreen(),
     const ProfileScreen(),
   ];
@@ -32,8 +32,8 @@ class _BottomScreenLayoutState extends State<BottomScreenLayout> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.map),
-            label: 'Map',
+            icon: Icon(Icons.hotel),
+            label: 'Accommodation',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.book),
