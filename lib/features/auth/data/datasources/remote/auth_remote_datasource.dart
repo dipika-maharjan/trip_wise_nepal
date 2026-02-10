@@ -5,7 +5,6 @@ import 'package:trip_wise_nepal/core/services/storage/token_service.dart';
 import 'package:trip_wise_nepal/core/services/storage/user_session_service.dart';
 import 'package:trip_wise_nepal/features/auth/data/datasources/auth_datasource.dart';
 import 'package:trip_wise_nepal/features/auth/data/models/auth_api_model.dart';
-import 'package:trip_wise_nepal/features/auth/data/models/auth_hive_model.dart';
 
 //Create Provider
 final authRemoteDatasourceProvider = Provider<IAuthRemoteDataSource>((ref) {
@@ -106,6 +105,40 @@ class AuthRemoteDatasource implements IAuthRemoteDataSource {
   Future<AuthApiModel?> getUserById(String authId) {
     // TODO: implement getUserById
     throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> requestPasswordReset(String email) async {
+    try {
+      final response = await _apiClient.post(
+        ApiEndpoints.requestPasswordReset,
+        data: {'email': email},
+      );
+
+      if (response.data['success'] == true) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> resetPassword(String token, String newPassword) async {
+    try {
+      final response = await _apiClient.post(
+        ApiEndpoints.resetPassword(token),
+        data: {'newPassword': newPassword},
+      );
+
+      if (response.data['success'] == true) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      rethrow;
+    }
   }
   
 

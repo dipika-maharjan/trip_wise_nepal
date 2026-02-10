@@ -41,4 +41,8 @@ class ApiEndpoints {
   // Profile endpoints
   static const String updateProfile = '/auth/update-profile';
   static const String getProfile = '/auth/profile';
+
+  // Password reset endpoints
+  static const String requestPasswordReset = '/auth/request-password-reset';
+  static String resetPassword(String token) => '/auth/reset-password/$token';
 }
