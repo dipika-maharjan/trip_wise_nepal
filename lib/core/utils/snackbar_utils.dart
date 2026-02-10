@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/app/theme/app_colors.dart';
 
 class SnackbarUtils {
   // Show success snackbar
