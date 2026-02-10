@@ -45,4 +45,10 @@ class ApiEndpoints {
   // Password reset endpoints
   static const String requestPasswordReset = '/auth/request-password-reset';
   static String resetPassword(String token) => '/auth/reset-password/$token';
+
+  // Accommodation endpoints
+  static const String getAccommodations = '/accommodations';
+  static String getAccommodationById(String id) => '/accommodations/$id';
+  static const String searchAccommodations = '/accommodations/search';
+  static const String getAccommodationsByPriceRange = '/accommodations/price-range';
 }
