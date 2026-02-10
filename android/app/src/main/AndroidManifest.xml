@@ -33,6 +33,43 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Deep link for password reset -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <!-- Handle http://localhost:3000/reset-password -->
+                <data
+                    android:scheme="http"
+                    android:host="localhost"
+                    android:port="3000"
+                    android:path="/reset-password"/>
+                <data
+                    android:scheme="http"
+                    android:host="localhost"
+                    android:port="3000"
+                    android:pathPattern="/reset-password.*"/>
+                <!-- Keep legacy localhost:5050 just in case -->
+                <data
+                    android:scheme="http"
+                    android:host="localhost"
+                    android:port="5050"
+                    android:path="/reset-password"/>
+                <data
+                    android:scheme="http"
+                    android:host="localhost"
+                    android:port="5050"
+                    android:pathPattern="/reset-password.*"/>
+            </intent-filter>
+            <!-- Custom deep link for password reset -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="tripwisenepal"
+                    android:host="reset-password"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

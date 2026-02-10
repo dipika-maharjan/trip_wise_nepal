@@ -49,6 +49,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2  
   connectivity_plus: ^7.0.0
   test_cov_console: ^0.2.2
+  app_links: ^6.4.0
 
 dev_dependencies:
   flutter_test:
