@@ -21,6 +21,23 @@ class UserSessionService {
 
   UserSessionService({required SharedPreferences prefs}) : _prefs = prefs;
 
+  // Normalize profile picture URL from backend
+  String? _normalizeProfilePictureUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    
+    // Don't store default-profile.png - treat it as no profile picture
+    if (url.contains('default-profile.png')) return null;
+    
+    // If it's already a full URL, return as-is
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    
+    // If it already has /uploads/ prefix, return as-is
+    if (url.startsWith('/uploads/')) return url;
+    
+    // Otherwise, add /uploads/ prefix to bare filename
+    return '/uploads/$url';
+  }
+
   // Save user session after login
   Future<void> saveUserSession({
     required String userId,
@@ -34,8 +51,13 @@ class UserSessionService {
     await _prefs.setString(_keyUserEmail, email);
     await _prefs.setString(_keyUserFullName, fullName);
     await _prefs.setString(_keyUserUsername, username);
-    if (profilePicture != null) {
-      await _prefs.setString(_keyUserProfilePicture, profilePicture);
+    
+    // Normalize and save profile picture URL
+    final normalizedUrl = _normalizeProfilePictureUrl(profilePicture);
+    if (normalizedUrl != null) {
+      await _prefs.setString(_keyUserProfilePicture, normalizedUrl);
+    } else {
+      await _prefs.remove(_keyUserProfilePicture);
     }
   }
 
@@ -71,7 +93,12 @@ class UserSessionService {
 
   // Update user profile picture after upload
   Future<void> updateUserProfilePicture(String imageUrl) async {
-    await _prefs.setString(_keyUserProfilePicture, imageUrl);
+    final normalizedUrl = _normalizeProfilePictureUrl(imageUrl);
+    if (normalizedUrl != null) {
+      await _prefs.setString(_keyUserProfilePicture, normalizedUrl);
+    } else {
+      await _prefs.remove(_keyUserProfilePicture);
+    }
   }
 
   // Clear user session (logout)

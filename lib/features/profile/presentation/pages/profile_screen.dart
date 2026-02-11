@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:trip_wise_nepal/app/routes/app_routes.dart';
 import 'package:trip_wise_nepal/app/theme/app_colors.dart';
 import 'package:trip_wise_nepal/core/services/storage/user_session_service.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/pages/login_screen.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/view_model/auth_view_model.dart';
 import 'package:trip_wise_nepal/features/profile/presentation/view_model/profile_viewmodel.dart';
+import 'package:trip_wise_nepal/features/profile/presentation/state/profile_state.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -19,37 +21,49 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-    bool _hasListener = false;
   XFile? _selectedImage;
   final ImagePicker _imagePicker = ImagePicker();
+  int _imageTimestamp = DateTime.now().millisecondsSinceEpoch;
 
   @override
   Widget build(BuildContext context) {
-        // Register ref.listen only once per widget lifecycle
-        if (!_hasListener) {
-          ref.listen(profileViewModelProvider, (previous, next) {
-            if (next.status.name == 'loaded' && next.imageUrl != null) {
-              final userSessionService = ref.read(userSessionServiceProvider);
-              userSessionService.updateUserProfilePicture(next.imageUrl!);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile image updated successfully')),
-                );
-                // Force rebuild to show new image
-                setState(() {});
-              }
-              ref.read(profileViewModelProvider.notifier).resetState();
-            } else if (next.status.name == 'error') {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(next.errorMessage ?? 'Failed to upload image')),
-                );
-              }
-              ref.read(profileViewModelProvider.notifier).resetState();
-            }
-          });
-          _hasListener = true;
+    // Listen for profile upload state changes
+    ref.listen(profileViewModelProvider, (previous, next) {
+      if (next.status == ProfileStatus.loaded && next.imageUrl != null) {
+        final userSessionService = ref.read(userSessionServiceProvider);
+        
+        // Clear the old image from cache BEFORE updating to ensure new one loads
+        final oldUrl = userSessionService.getCurrentUserProfilePicture();
+        if (oldUrl != null && oldUrl.isNotEmpty) {
+          const String baseUrl = 'http://10.0.2.2:5050';
+          final String fullOldUrl = oldUrl.startsWith('http') ? oldUrl : '$baseUrl$oldUrl';
+          DefaultCacheManager().removeFile(fullOldUrl);
         }
+        
+        // Now update with the new URL
+        userSessionService.updateUserProfilePicture(next.imageUrl!);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile image updated successfully')),
+          );
+          // Update timestamp to bust cache and clear selected image
+          setState(() {
+            _imageTimestamp = DateTime.now().millisecondsSinceEpoch;
+            _selectedImage = null;
+          });
+        }
+        ref.read(profileViewModelProvider.notifier).resetState();
+      } else if (next.status == ProfileStatus.error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(next.errorMessage ?? 'Failed to upload image')),
+          );
+        }
+        ref.read(profileViewModelProvider.notifier).resetState();
+      }
+    });
+    
     final userSessionService = ref.watch(userSessionServiceProvider);
     final userName = userSessionService.getCurrentUserFullName() ?? 'User';
     final userEmail = userSessionService.getCurrentUserEmail() ?? '';
@@ -237,15 +251,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
     }
 
-    // Show server image if available
+    // Show server image if available (URL is already normalized by UserSessionService)
     if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
-      const String baseUrl = 'http://10.0.2.2:5050/uploads/';
+      const String baseUrl = 'http://10.0.2.2:5050';
       final String imageUrl = profilePictureUrl.startsWith('http')
           ? profilePictureUrl
-          : baseUrl + profilePictureUrl;
+          : '$baseUrl$profilePictureUrl';
       
-      // Add timestamp to bypass cache when image updates
-      final String cacheBustedUrl = '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+      // Add stable timestamp to bypass cache when image updates
+      final String cacheBustedUrl = '$imageUrl?t=$_imageTimestamp';
       
       return CachedNetworkImage(
         imageUrl: cacheBustedUrl,
