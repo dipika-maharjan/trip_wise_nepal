@@ -31,14 +31,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             if (next.status.name == 'loaded' && next.imageUrl != null) {
               final userSessionService = ref.read(userSessionServiceProvider);
               userSessionService.updateUserProfilePicture(next.imageUrl!);
-              // Clear selected image to show server image
-              setState(() {
-                _selectedImage = null;
-              });
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Profile image updated successfully')),
                 );
+                // Force rebuild to show new image
+                setState(() {});
               }
               ref.read(profileViewModelProvider.notifier).resetState();
             } else if (next.status.name == 'error') {
@@ -246,10 +244,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ? profilePictureUrl
           : baseUrl + profilePictureUrl;
       
-      // Get stored timestamp - only changes when image is uploaded
-      final userSessionService = ref.read(userSessionServiceProvider);
-      final timestamp = userSessionService.getProfilePictureTimestamp();
-      final String cacheBustedUrl = timestamp > 0 ? '$imageUrl?t=$timestamp' : imageUrl;
+      // Add timestamp to bypass cache when image updates
+      final String cacheBustedUrl = '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
       
       return CachedNetworkImage(
         imageUrl: cacheBustedUrl,
