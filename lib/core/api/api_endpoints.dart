@@ -4,8 +4,14 @@ import 'package:flutter/foundation.dart';
 
 class ApiEndpoints {
   ApiEndpoints._();
+  
+  /// Set to true when building for physical devices (Android phones, tablets, etc.)
+  /// Set to false for emulators/simulators
+  /// When true, uses [compIpAddress] instead of 10.0.2.2 (emulator-only address)
   static const bool isPhysicalDevice = false;
 
+  /// IP address of the development server for physical devices
+  /// Change this to your actual server IP address
   static const String compIpAddress = "192.168.101.13";
 
   static String get baseUrl {
