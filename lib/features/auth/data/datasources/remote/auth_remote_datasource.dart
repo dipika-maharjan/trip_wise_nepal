@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trip_wise_nepal/core/api/api_client.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:trip_wise_nepal/core/api/api_endpoints.dart';
 import 'package:trip_wise_nepal/core/services/storage/token_service.dart';
 import 'package:trip_wise_nepal/core/services/storage/user_session_service.dart';
@@ -41,9 +42,16 @@ class AuthRemoteDatasource implements IAuthRemoteDataSource {
       // Backend may return only {success, token} with no user payload.
       final rawUser = response.data['data'] ?? response.data['user'];
 
+      final token = response.data['token'];
+      if (token != null) {
+        await _tokenService.saveToken(token);
+        // Also save to FlutterSecureStorage for Dio AuthInterceptor
+        const storage = FlutterSecureStorage();
+        await storage.write(key: 'auth_token', value: token);
+      }
+
       if (rawUser is Map<String, dynamic>) {
         final user = AuthApiModel.fromJson(rawUser);
-
         await _userSessionService.saveUserSession(
           userId: user.id ?? '',
           email: user.email,
@@ -51,19 +59,10 @@ class AuthRemoteDatasource implements IAuthRemoteDataSource {
           username: user.username,
           profilePicture: user.profilePicture,
         );
-
-        final token = response.data['token'];
-        await _tokenService.saveToken(token);
         return user;
       }
 
-      // If user details are missing, still save token and synthesize a minimal user
-      // so the login flow can continue instead of returning "invalid".
-      final token = response.data['token'];
-      if (token != null) {
-        await _tokenService.saveToken(token);
-      }
-
+      // If user details are missing, synthesize a minimal user
       final fallbackUsername = email.split('@').first;
       final user = AuthApiModel(
         id: null,

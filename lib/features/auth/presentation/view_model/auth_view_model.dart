@@ -6,12 +6,14 @@ import 'package:trip_wise_nepal/features/auth/domain/usecases/register_usecase.d
 import 'package:trip_wise_nepal/features/auth/domain/usecases/request_password_reset_usecase.dart';
 import 'package:trip_wise_nepal/features/auth/domain/usecases/reset_password_usecase.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/state/auth_state.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final authViewModelProvider = NotifierProvider<AuthViewModel, AuthState>(
   AuthViewModel.new,
 );
 
 class AuthViewModel extends Notifier<AuthState> {
+  final _storage = const FlutterSecureStorage();
   late final RegisterUseCase _registerUsecase;
   late final LoginUseCase _loginUsecase;
   late final GetCurrentUserUseCase _getCurrentUserUsecase;
@@ -66,12 +68,15 @@ class AuthViewModel extends Notifier<AuthState> {
     );
 
     result.fold(
-      (failure) => state = state.copyWith(
-        status: AuthStatus.error,
-        errorMessage: failure.message,
-      ),
-      (user) =>
-          state = state.copyWith(status: AuthStatus.authenticated, user: user),
+      (failure) {
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: failure.message,
+        );
+      },
+      (user) {
+        state = state.copyWith(status: AuthStatus.authenticated, user: user);
+      },
     );
   }
 
