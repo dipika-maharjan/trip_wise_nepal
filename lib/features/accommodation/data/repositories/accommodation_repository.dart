@@ -42,7 +42,8 @@ class AccommodationRepository implements IAccommodationRepository {
         );
 
         if (apiModels != null && apiModels.isNotEmpty) {
-          final entities = AccommodationApiModel.toEntityList(apiModels);
+          final activeModels = apiModels.where((m) => m.isActive).toList();
+          final entities = AccommodationApiModel.toEntityList(activeModels);
           return Right(entities);
         }
         return const Left(
