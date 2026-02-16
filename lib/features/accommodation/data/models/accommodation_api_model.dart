@@ -1,4 +1,6 @@
 import 'package:trip_wise_nepal/features/accommodation/domain/entities/accommodation_entity.dart';
+import 'package:trip_wise_nepal/features/accommodation/data/models/room_type_api_model.dart';
+import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extra_api_model.dart';
 
 class AccommodationApiModel {
   final String? id;
@@ -15,6 +17,8 @@ class AccommodationApiModel {
   final double? rating;
   final int? totalReviews;
   final bool isActive;
+  final List<RoomTypeApiModel>? roomTypes;
+  final List<OptionalExtraApiModel>? optionalExtras;
 
   AccommodationApiModel({
     this.id,
@@ -31,6 +35,8 @@ class AccommodationApiModel {
     this.rating,
     this.totalReviews,
     this.isActive = true,
+    this.roomTypes,
+    this.optionalExtras,
   });
 
   // fromJson
@@ -44,7 +50,7 @@ class AccommodationApiModel {
       amenities: List<String>.from(json['amenities'] ?? []),
       ecoFriendlyHighlights:
           List<String>.from(json['ecoFriendlyHighlights'] ?? []),
-      pricePerNight: (json['pricePerNight'] as num).toDouble(),
+      pricePerNight: (json['pricePerNight'] != null ? (json['pricePerNight'] as num).toDouble() : 0.0),
       location: json['location'] != null
           ? LocationModel.fromJson(json['location'])
           : null,
@@ -53,6 +59,16 @@ class AccommodationApiModel {
       rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
       totalReviews: json['totalReviews'] as int?,
       isActive: json['isActive'] as bool? ?? true,
+      roomTypes: json['roomTypes'] != null
+          ? (json['roomTypes'] as List)
+              .map((rt) => RoomTypeApiModel.fromJson(rt))
+              .toList()
+          : null,
+      optionalExtras: json['optionalExtras'] != null
+        ? (json['optionalExtras'] as List)
+            .map((e) => OptionalExtraApiModel.fromJson(e))
+            .toList()
+        : null,
     );
   }
 
@@ -90,6 +106,8 @@ class AccommodationApiModel {
       rating: rating,
       totalReviews: totalReviews,
       isActive: isActive,
+      roomTypes: roomTypes?.map((rt) => rt.toEntity()).toList(),
+      optionalExtras: optionalExtras,
     );
   }
 

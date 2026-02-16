@@ -1,5 +1,9 @@
 import 'package:equatable/equatable.dart';
 
+
+import 'package:trip_wise_nepal/features/accommodation/domain/entities/room_type_entity.dart';
+import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extra_api_model.dart';
+
 class AccommodationEntity extends Equatable {
   final String? id;
   final String name;
@@ -16,6 +20,9 @@ class AccommodationEntity extends Equatable {
   final int? totalReviews;
   final bool isActive;
 
+  final List<RoomTypeEntity>? roomTypes;
+  final List<OptionalExtraApiModel>? optionalExtras;
+
   const AccommodationEntity({
     this.id,
     required this.name,
@@ -31,6 +38,8 @@ class AccommodationEntity extends Equatable {
     this.rating,
     this.totalReviews,
     this.isActive = true,
+    this.roomTypes,
+    this.optionalExtras,
   });
 
   @override
@@ -49,6 +58,8 @@ class AccommodationEntity extends Equatable {
         rating,
         totalReviews,
         isActive,
+        roomTypes,
+        optionalExtras,
       ];
 }
 
