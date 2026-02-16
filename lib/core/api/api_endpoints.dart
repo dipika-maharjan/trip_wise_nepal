@@ -57,4 +57,10 @@ class ApiEndpoints {
   static String getAccommodationById(String id) => '/accommodations/$id';
   static const String searchAccommodations = '/accommodations/search';
   static const String getAccommodationsByPriceRange = '/accommodations/price-range';
+
+  // Booking endpoints
+    static const String getBookings = '/bookings/my-bookings';
+  static String getBookingById(String id) => '/bookings/$id';
+  static const String createBooking = '/bookings';
+  static String cancelBooking(String id) => '/bookings/$id';
 }
