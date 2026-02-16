@@ -1,3 +1,5 @@
+import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,11 @@ import 'package:trip_wise_nepal/core/utils/snackbar_utils.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/state/accommodation_state.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/utils/image_url_helper.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/view_model/accommodation_view_model.dart';
+import 'package:trip_wise_nepal/features/accommodation/domain/entities/room_type_entity.dart';
+import 'package:trip_wise_nepal/features/accommodation/data/datasources/remote/room_type_remote_datasource.dart';
+import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extra_api_model.dart';
+import 'package:trip_wise_nepal/features/accommodation/data/datasources/remote/optional_extra_remote_datasource.dart';
+import 'package:trip_wise_nepal/core/api/api_client.dart';
 
 class AccommodationDetailScreen extends ConsumerStatefulWidget {
   final String accommodationId;
@@ -21,14 +28,52 @@ class AccommodationDetailScreen extends ConsumerStatefulWidget {
 
 class _AccommodationDetailScreenState
     extends ConsumerState<AccommodationDetailScreen> {
+  List<RoomTypeEntity> _roomTypes = [];
+  bool _roomTypesLoading = false;
+  String? _roomTypesError;
+  List<OptionalExtraApiModel> _optionalExtras = [];
+  bool _optionalExtrasLoading = false;
+  String? _optionalExtrasError;
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      ref
-          .read(accommodationViewModelProvider.notifier)
-          .getAccommodationById(widget.accommodationId);
+    Future.microtask(() async {
+      ref.read(accommodationViewModelProvider.notifier).getAccommodationById(widget.accommodationId);
+      await _fetchRoomTypes();
+      await _fetchOptionalExtras();
     });
+  }
+
+  Future<void> _fetchRoomTypes() async {
+    setState(() { _roomTypesLoading = true; _roomTypesError = null; });
+    try {
+      final apiClient = ApiClient();
+      final ds = RoomTypeRemoteDataSource(apiClient: apiClient);
+      final types = await ds.getRoomTypesByAccommodationId(widget.accommodationId);
+      print('[DEBUG] Room types fetched: count = \\${types.length}, data = \\${types.map((e) => e.name).toList()}');
+      setState(() { _roomTypes = types; });
+    } catch (e) {
+      print('[DEBUG] Room types fetch error: $e');
+      setState(() { _roomTypesError = 'Failed to load room types'; });
+    } finally {
+      setState(() { _roomTypesLoading = false; });
+    }
+  }
+
+  Future<void> _fetchOptionalExtras() async {
+    setState(() { _optionalExtrasLoading = true; _optionalExtrasError = null; });
+    try {
+      final apiClient = ApiClient();
+      final ds = OptionalExtraRemoteDatasource(apiClient: apiClient);
+      final extras = await ds.getOptionalExtrasByAccommodationId(widget.accommodationId);
+      setState(() { _optionalExtras = extras; });
+    } catch (e) {
+      print('[DEBUG] Optional extras fetch error: $e');
+      setState(() { _optionalExtrasError = 'Failed to load optional extras'; });
+    } finally {
+      setState(() { _optionalExtrasLoading = false; });
+    }
   }
 
   String _formatDate(String dateString) {
@@ -515,27 +560,53 @@ class _AccommodationDetailScreenState
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
-                              // TODO: Navigate to booking screen
-                              SnackbarUtils.showInfo(
+                            onPressed: _roomTypesLoading ? null : () async {
+                              final storage = const FlutterSecureStorage();
+                              final token = await storage.read(key: 'auth_token') ?? '';
+                              print('[DEBUG] Booking token: $token');
+                              if (token.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('No valid token found. Please log in again.')),
+                                );
+                                return;
+                              }
+                              Navigator.push(
                                 context,
-                                'Booking feature coming soon!',
+                                MaterialPageRoute(
+                                  builder: (context) => BookingFormScreen(
+                                    accommodationId: accommodation.id ?? '',
+                                    accommodationName: accommodation.name,
+                                    accommodationImage: (accommodation.images.isNotEmpty)
+                                      ? ImageUrlHelper.buildImageUrl(accommodation.images[0])
+                                      : '',
+                                    accommodationLocation: accommodation.address,
+                                    roomTypes: _roomTypes,
+                                    optionalExtras: _optionalExtras,
+                                    token: token,
+                                  ),
+                                ),
                               );
                             },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: const Color(0xFF136767),
                             ),
-                            child: const Text(
-                              'Book Now',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            child: _roomTypesLoading
+                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text(
+                                  'Book Now',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                           ),
                         ),
+                        if (_roomTypesError != null) ...[
+                          const SizedBox(height: 8),
+                          Text(_roomTypesError!, style: TextStyle(color: Colors.red)),
+                        ],
                         const SizedBox(height: 12),
                         Center(
                           child: Text(
