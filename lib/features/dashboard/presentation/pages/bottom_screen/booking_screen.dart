@@ -1,3 +1,4 @@
+import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
 import 'package:flutter/cupertino.dart';
 
 class BookingScreen extends StatelessWidget {
@@ -5,8 +6,7 @@ class BookingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      child: Text("Booking screen"),
-    );
+    // Show booking list screen
+    return const BookingListScreen();
   }
 }
