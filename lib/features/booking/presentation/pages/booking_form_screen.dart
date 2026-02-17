@@ -12,6 +12,8 @@ class BookingFormScreen extends StatefulWidget {
   final List<RoomTypeEntity> roomTypes;
   final List<OptionalExtraApiModel> optionalExtras;
   final String token; // JWT for Authorization
+  final dynamic booking;
+  final bool isEdit;
 
   const BookingFormScreen({
     required this.accommodationId,
@@ -21,6 +23,8 @@ class BookingFormScreen extends StatefulWidget {
     required this.roomTypes,
     required this.optionalExtras,
     required this.token,
+    this.booking,
+    this.isEdit = false,
     super.key,
   });
 
@@ -29,11 +33,29 @@ class BookingFormScreen extends StatefulWidget {
 }
 
 class _BookingFormScreenState extends State<BookingFormScreen> {
-    @override
-    void initState() {
-      super.initState();
-      _calculateTotalPrice();
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEdit && widget.booking != null) {
+      final booking = widget.booking;
+      _checkInDate = booking.checkIn;
+      _checkOutDate = booking.checkOut;
+      _guests = booking.guests;
+      _roomsBooked = booking.roomsBooked;
+      // _specialRequest = booking.specialRequest; // Uncomment if BookingEntity has this field
+      // Prefill selected room type
+      try {
+        _selectedRoomType = widget.roomTypes.firstWhere((rt) => rt.id == booking.roomTypeId);
+      } catch (_) {}
+      // Prefill extras
+      if (booking.extras is List && booking.extras.isNotEmpty) {
+        for (final extra in booking.extras) {
+          _extraQuantities[extra.id] = extra.quantity;
+        }
+      }
     }
+    _calculateTotalPrice();
+  }
   final _formKey = GlobalKey<FormState>();
   RoomTypeEntity? _selectedRoomType;
   DateTime? _checkInDate;
@@ -109,20 +131,38 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     try {
       print('[DEBUG] Booking payload: $payload');
       final dio = Dio();
-      final response = await dio.post(
-        "http://10.0.2.2:5050/api/bookings",
-        data: payload,
-        options: Options(
-          headers: {
-            "Authorization": "Bearer ${widget.token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
-        ),
-      );
+      late Response response;
+      if (widget.isEdit && widget.booking != null && widget.booking.id != null) {
+        // Update booking (PATCH)
+        response = await dio.patch(
+          "http://10.0.2.2:5050/api/bookings/${widget.booking.id}",
+          data: payload,
+          options: Options(
+            headers: {
+              "Authorization": "Bearer ${widget.token}",
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+          ),
+        );
+      } else {
+        // Create booking (POST)
+        response = await dio.post(
+          "http://10.0.2.2:5050/api/bookings",
+          data: payload,
+          options: Options(
+            headers: {
+              "Authorization": "Bearer ${widget.token}",
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+          ),
+        );
+      }
       print('[DEBUG] Booking response: ${response.statusCode} ${response.data}');
-      if (response.statusCode == 201 && response.data['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking submitted!')));
+      final isSuccess = (widget.isEdit ? response.statusCode == 200 : response.statusCode == 201) && response.data['success'] == true;
+      if (isSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.isEdit ? 'Booking updated!' : 'Booking submitted!')));
         Future.delayed(const Duration(milliseconds: 500), () {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => BookingListScreen()),
@@ -130,15 +170,15 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           );
         });
       } else {
-        setState(() { _error = response.data['message'] ?? 'Booking failed.'; });
+        setState(() { _error = response.data['message'] ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.'); });
       }
     } catch (e) {
       if (e is DioException && e.response != null) {
         print('[DEBUG] Booking error response: ${e.response?.data}');
-        setState(() { _error = 'Booking failed: ${e.response?.data ?? e.toString()}'; });
+        setState(() { _error = (widget.isEdit ? 'Update failed: ' : 'Booking failed: ') + (e.response?.data?.toString() ?? e.toString()); });
       } else {
         print('[DEBUG] Booking error: $e');
-        setState(() { _error = 'Booking failed: ${e.toString()}'; });
+        setState(() { _error = (widget.isEdit ? 'Update failed: ' : 'Booking failed: ') + e.toString(); });
       }
     } finally {
       setState(() { _isLoading = false; });
@@ -169,7 +209,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Complete Your Booking'),
+        title: Text(widget.isEdit ? 'Edit Booking' : 'Complete Your Booking'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -227,6 +267,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               DropdownButtonFormField<RoomTypeEntity>(
                 isExpanded: true,
                 decoration: const InputDecoration(hintText: 'Choose a room type'),
+                value: _selectedRoomType,
                 items: widget.roomTypes
                     .where((rt) => rt.isActive == true && rt.pricePerNight > 0)
                     .map((rt) => DropdownMenuItem<RoomTypeEntity>(
@@ -239,55 +280,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                   _calculateTotalPrice();
                 },
                 validator: (val) => val == null ? 'Select a room type' : null,
-              ),
-              const SizedBox(height: 16),
-              // Check-in date
-              const Text('Check-in Date *', style: TextStyle(fontWeight: FontWeight.bold)),
-              ListTile(
-                title: Text(_checkInDate == null
-                    ? 'mm/dd/yyyy'
-                    : 'Check-in: ${_checkInDate!.toLocal().toString().split(' ')[0]}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _checkInDate ?? DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      _checkInDate = picked;
-                      if (_checkOutDate != null && _checkOutDate!.isBefore(picked)) {
-                        _checkOutDate = null;
-                      }
-                    });
-                    _calculateTotalPrice();
-                  }
-                },
-              ),
-              const SizedBox(height: 8),
-              // Check-out date
-              const Text('Check-out Date *', style: TextStyle(fontWeight: FontWeight.bold)),
-              ListTile(
-                title: Text(_checkOutDate == null
-                    ? 'mm/dd/yyyy'
-                    : 'Check-out: ${_checkOutDate!.toLocal().toString().split(' ')[0]}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _checkOutDate ?? (_checkInDate != null ? _checkInDate!.add(const Duration(days: 1)) : DateTime.now().add(const Duration(days: 1))),
-                    firstDate: _checkInDate != null ? _checkInDate!.add(const Duration(days: 1)) : DateTime.now().add(const Duration(days: 1)),
-                    lastDate: DateTime.now().add(const Duration(days: 366)),
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      _checkOutDate = picked;
-                    });
-                    _calculateTotalPrice();
-                  }
-                },
               ),
               const SizedBox(height: 16),
               // Number of guests
@@ -404,6 +396,9 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                     })
                     .toList(),
               ]
+              else if (widget.isEdit) ...[
+                const Text('No optional extras available for this booking.', style: TextStyle(color: Colors.grey)),
+              ]
               else ...[
                 const Text('No optional extras available.', style: TextStyle(color: Colors.grey)),
               ],
@@ -428,7 +423,10 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                     backgroundColor: const Color(0xFF136767),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: const Text('Confirm Booking', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    widget.isEdit ? 'Update Booking' : 'Confirm Booking',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
