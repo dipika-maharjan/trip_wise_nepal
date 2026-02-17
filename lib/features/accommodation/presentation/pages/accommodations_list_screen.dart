@@ -448,14 +448,6 @@ class _AccommodationsListScreenState
                         ),
                       ),
                     const SizedBox(height: 4),
-                    Text(
-                      'Rs ${accommodation.pricePerNight.toStringAsFixed(0)} / night',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Color(0xFF136767),
-                      ),
-                    ),
                   ],
                 ),
               ),
