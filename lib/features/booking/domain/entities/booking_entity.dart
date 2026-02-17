@@ -1,3 +1,4 @@
+import 'package:trip_wise_nepal/features/booking/data/models/booking_api_model.dart';
 class BookingEntity {
   final String id;
   final String accommodationId;
@@ -11,6 +12,7 @@ class BookingEntity {
   final int roomsBooked;
   final double totalPrice;
   final String status;
+  final List<BookingExtra> extras;
 
   BookingEntity({
     required this.id,
@@ -25,5 +27,6 @@ class BookingEntity {
     required this.roomsBooked,
     required this.totalPrice,
     required this.status,
+    required this.extras,
   });
 }

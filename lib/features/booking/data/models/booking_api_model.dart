@@ -1,4 +1,23 @@
 
+
+class BookingExtra {
+  final String id;
+  final String name;
+  final int quantity;
+  final double total;
+  BookingExtra({required this.id, required this.name, required this.quantity, required this.total});
+  factory BookingExtra.fromJson(Map<String, dynamic> json) {
+    final idRaw = json['extraId'];
+    final nameRaw = json['name'];
+    return BookingExtra(
+      id: idRaw == null ? '' : idRaw.toString(),
+      name: nameRaw == null ? '' : nameRaw.toString(),
+      quantity: json['quantity'] ?? 0,
+      total: (json['total'] ?? 0).toDouble(),
+    );
+  }
+}
+
 class BookingApiModel {
   final String id;
   final String accommodationId;
@@ -12,6 +31,7 @@ class BookingApiModel {
   final int roomsBooked;
   final double totalPrice;
   final String status;
+  final List<BookingExtra> extras;
 
   BookingApiModel({
     required this.id,
@@ -26,6 +46,7 @@ class BookingApiModel {
     required this.roomsBooked,
     required this.totalPrice,
     required this.status,
+    required this.extras,
   });
 
   factory BookingApiModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +65,19 @@ class BookingApiModel {
         imageUrl = 'http://10.0.2.2:5050$rawImage';
       }
     }
+    // Defensive: ensure extras is a List<Map<String, dynamic>>
+    List<BookingExtra> extrasList = [];
+    if (json['extras'] is List) {
+      for (final e in (json['extras'] as List)) {
+        if (e is Map<String, dynamic>) {
+          extrasList.add(BookingExtra.fromJson(e));
+        } else if (e != null) {
+          try {
+            extrasList.add(BookingExtra.fromJson(Map<String, dynamic>.from(e)));
+          } catch (_) {}
+        }
+      }
+    }
     return BookingApiModel(
       id: json['_id'] ?? '',
       accommodationId: acc != null ? acc['_id'] ?? '' : (json['accommodationId'] ?? ''),
@@ -57,6 +91,7 @@ class BookingApiModel {
       roomsBooked: json['roomsBooked'] ?? 1,
       totalPrice: (json['totalPrice'] ?? 0).toDouble(),
       status: json['bookingStatus'] ?? json['status'] ?? '',
+      extras: extrasList,
     );
   }
 }

@@ -12,8 +12,15 @@ class BookingRemoteDataSource implements IBookingDataSource {
   Future<List<BookingApiModel>?> getBookings() async {
     final response = await _apiClient.get(ApiEndpoints.getBookings);
     if (response.statusCode == 200 && response.data['data'] != null) {
+      // Each item is expected to be { booking: {...}, extras: [...] }
       return (response.data['data'] as List)
-          .map((json) => BookingApiModel.fromJson(json))
+          .map((item) {
+            final bookingJson = item['booking'] ?? item;
+            if (item['extras'] != null) {
+              bookingJson['extras'] = item['extras'];
+            }
+            return BookingApiModel.fromJson(bookingJson);
+          })
           .toList();
     }
     return null;
@@ -23,7 +30,12 @@ class BookingRemoteDataSource implements IBookingDataSource {
   Future<BookingApiModel?> getBookingById(String id) async {
     final response = await _apiClient.get(ApiEndpoints.getBookingById(id));
     if (response.statusCode == 200 && response.data['data'] != null) {
-      return BookingApiModel.fromJson(response.data['data']);
+      final data = response.data['data'];
+      final bookingJson = data['booking'] ?? data;
+      if (data['extras'] != null) {
+        bookingJson['extras'] = data['extras'];
+      }
+      return BookingApiModel.fromJson(bookingJson);
     }
     return null;
   }

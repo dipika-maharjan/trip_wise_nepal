@@ -24,6 +24,7 @@ class BookingRepository {
         roomsBooked: booking.roomsBooked,
         totalPrice: booking.totalPrice,
         status: booking.status,
+        extras: booking.extras,
       );
     }).toList() ?? [];
   }
@@ -32,18 +33,19 @@ class BookingRepository {
     final m = await _datasource.getBookingById(id);
     if (m == null) return null;
     return BookingEntity(
-      id: m?.id ?? '',
-      accommodationId: m?.accommodationId ?? '',
-      accommodationName: m?.accommodationName ?? '',
-      accommodationImage: m?.accommodationImage ?? '',
-      roomTypeId: m?.roomTypeId ?? '',
-      roomTypeName: m?.roomTypeName ?? '',
-      checkIn: m?.checkIn ?? DateTime.now(),
-      checkOut: m?.checkOut ?? DateTime.now(),
-      guests: m?.guests ?? 1,
-      roomsBooked: m?.roomsBooked ?? 1,
-      totalPrice: m?.totalPrice ?? 0.0,
-      status: m?.status ?? '',
+      id: m.id,
+      accommodationId: m.accommodationId,
+      accommodationName: m.accommodationName,
+      accommodationImage: m.accommodationImage,
+      roomTypeId: m.roomTypeId,
+      roomTypeName: m.roomTypeName,
+      checkIn: m.checkIn,
+      checkOut: m.checkOut,
+      guests: m.guests,
+      roomsBooked: m.roomsBooked,
+      totalPrice: m.totalPrice,
+      status: m.status,
+      extras: m.extras,
     );
   }
 
@@ -63,6 +65,7 @@ class BookingRepository {
       roomsBooked: m.roomsBooked,
       totalPrice: m.totalPrice,
       status: m.status,
+      extras: m.extras,
     );
   }
 
