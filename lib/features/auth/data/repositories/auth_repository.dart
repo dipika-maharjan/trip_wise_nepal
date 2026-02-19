@@ -87,34 +87,40 @@ class AuthRepository implements IAuthRepository {
   ) async {
     if(await _networkInfo.isConnected){
       try{
-        //go to remote datasource
-      final apiModel = await _authRemoteDataSource.login(email, password);
-      if(apiModel != null){
-        final entity = apiModel.toEntity();
-        return Right(entity);
+        // Remote login
+        final apiModel = await _authRemoteDataSource.login(email, password);
+        if(apiModel != null){
+          final entity = apiModel.toEntity();
+          // Save user to Hive for persistence
+          print('[DEBUG] AuthRepository.login: mapping entity to hiveUser: $entity');
+          final hiveUser = AuthHiveModel.fromEntity(entity);
+          print('[DEBUG] AuthRepository.login: hiveUser = $hiveUser');
+          await _authDataSource.register(hiveUser);
+          print('[DEBUG] AuthRepository.login: user saved to Hive');
+          return Right(entity);
+        }
+        return const Left(ApiFailure(message: "Invalid email or password"));
+      }on DioException catch(e){
+        return Left(
+          ApiFailure(
+            message: e.response?.data['message'] ?? 'Login failed',
+            statusCode: e.response?. statusCode,
+        ),
+        );
+      }catch(e){
+        return Left(ApiFailure(message: e.toString()));
       }
-      return const Left(ApiFailure(message: "Invalid email or password"));
-    }on DioException catch(e){
-      return Left(
-        ApiFailure(
-          message: e.response?.data['message'] ?? 'Login failed',
-          statusCode: e.response?. statusCode,
-      ),
-      );
-    }catch(e){
-      return Left(ApiFailure(message: e.toString()));
-    }
     }else{
       try {
-      final model = await _authDataSource.login(email, password);
-      if (model != null) {
-        final entity = model.toEntity();
-        return Right(entity);
+        final model = await _authDataSource.login(email, password);
+        if (model != null) {
+          final entity = model.toEntity();
+          return Right(entity);
+        }
+        return const Left(LocalDatabaseFailure(message: "Invalid email or password"));
+      } catch (e) {
+        return Left(LocalDatabaseFailure(message: e.toString()));
       }
-      return const Left(LocalDatabaseFailure(message: "Invalid email or password"));
-    } catch (e) {
-      return Left(LocalDatabaseFailure(message: e.toString()));
-    }
     }
   }
 
