@@ -1,3 +1,6 @@
+import 'package:trip_wise_nepal/features/accommodation/presentation/state/review_notifier.dart';
+import 'package:trip_wise_nepal/features/accommodation/data/services/review_service.dart';
+import 'package:trip_wise_nepal/features/accommodation/presentation/state/review_state.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -13,6 +16,10 @@ import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extr
 import 'package:trip_wise_nepal/features/accommodation/data/datasources/remote/optional_extra_remote_datasource.dart';
 import 'package:trip_wise_nepal/core/api/api_client.dart';
 
+
+import 'package:trip_wise_nepal/features/auth/presentation/view_model/auth_view_model.dart';
+import 'package:trip_wise_nepal/features/auth/presentation/state/auth_state.dart';
+
 class AccommodationDetailScreen extends ConsumerStatefulWidget {
   final String accommodationId;
 
@@ -26,8 +33,11 @@ class AccommodationDetailScreen extends ConsumerStatefulWidget {
       _AccommodationDetailScreenState();
 }
 
-class _AccommodationDetailScreenState
-    extends ConsumerState<AccommodationDetailScreen> {
+class _AccommodationDetailScreenState extends ConsumerState<AccommodationDetailScreen> {
+  int? _editingIndex;
+  int? _editingRating;
+  String? _editingComment;
+  String _reviewSort = 'Latest';
   List<RoomTypeEntity> _roomTypes = [];
   bool _roomTypesLoading = false;
   String? _roomTypesError;
@@ -92,28 +102,6 @@ class _AccommodationDetailScreenState
   @override
   Widget build(BuildContext context) {
     final accommodationState = ref.watch(accommodationViewModelProvider);
-
-    ref.listen<AccommodationState>(accommodationViewModelProvider,
-        (previous, next) {
-      if (next.status == AccommodationStatus.error && next.errorMessage != null) {
-        SnackbarUtils.showError(context, next.errorMessage!);
-        ref.read(accommodationViewModelProvider.notifier).clearError();
-      }
-    });
-
-    if (accommodationState.status == AccommodationStatus.loading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Loading...'),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFF136767),
-          ),
-        ),
-      );
-    }
-
     final accommodation = accommodationState.selectedAccommodation;
 
     if (accommodation == null) {
@@ -501,9 +489,7 @@ class _AccommodationDetailScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        
                         const SizedBox(height: 16),
-
                         // Rating and reviews
                         if (accommodation.rating != null)
                           Row(
@@ -532,7 +518,6 @@ class _AccommodationDetailScreenState
                             ],
                           ),
                         const SizedBox(height: 20),
-
                         // Book now button
                         SizedBox(
                           width: double.infinity,
@@ -599,12 +584,298 @@ class _AccommodationDetailScreenState
                     ),
                   ),
                   const SizedBox(height: 20),
+
+                  // --- Insert the review section here ---
+                  _buildReviewSection(context),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildReviewSection(BuildContext context) {
+    final accommodationState = ref.watch(accommodationViewModelProvider);
+    final accommodation = accommodationState.selectedAccommodation;
+    final authState = ref.watch(authViewModelProvider);
+    final user = authState.user;
+    print('[DEBUG] ReviewSection: authState.status = \\${authState.status}, user = \\${user?.authId}, authState.user = \\${authState.user}');
+    final reviewState = ref.watch(reviewNotifierProvider(accommodation?.id ?? ''));
+    final reviewNotifier = ref.read(reviewNotifierProvider(accommodation?.id ?? '').notifier);
+
+    // Fetch reviews on first build
+    if (accommodation != null && reviewState.reviews.isEmpty && !reviewState.isLoading) {
+      Future.microtask(() => reviewNotifier.fetchReviews(refresh: true));
+    }
+
+    // Check if user can add review (logged in, not already reviewed)
+    bool isLoggedIn = user != null && authState.status == AuthStatus.authenticated;
+    bool hasReviewed = isLoggedIn && reviewState.reviews.any((r) => r.userId == user!.authId);
+
+    // Review form state
+    int? editingIndex = _editingIndex;
+    int? editingRating = _editingRating;
+    String? editingComment = _editingComment;
+    final reviewController = TextEditingController(text: editingComment ?? '');
+
+    Widget buildReviewForm({int? initialRating, String? initialComment, required void Function(int rating, String comment) onSubmit, void Function()? onCancel}) {
+      int selectedRating = initialRating ?? 0;
+      final commentController = TextEditingController(text: initialComment ?? '');
+      final isEditing = onCancel != null;
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ...List.generate(5, (i) => IconButton(
+                    icon: Icon(
+                      i < selectedRating ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                    ),
+                    onPressed: () => setState(() => selectedRating = i + 1),
+                  )),
+                ],
+              ),
+              TextField(
+                controller: commentController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  hintText: 'Write your review...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: const Color(0xFF136767),
+                    ),
+                    onPressed: () {
+                      if (selectedRating > 0 && commentController.text.trim().isNotEmpty) {
+                        onSubmit(selectedRating, commentController.text.trim());
+                      }
+                    },
+                    child: Text(isEditing ? 'Update' : 'Submit'),
+                  ),
+                  if (onCancel != null)
+                    TextButton(onPressed: onCancel, child: const Text('Cancel')),
+                ],
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 32, thickness: 1),
+        Row(
+          children: [
+            const Icon(Icons.reviews, color: Color(0xFF136767), size: 28),
+            const SizedBox(width: 8),
+            const Text(
+              'Ratings & Reviews',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF136767),
+              ),
+            ),
+            const Spacer(),
+            if (accommodation?.rating != null)
+              Row(
+                children: [
+                  const Icon(Icons.star, color: Colors.amber, size: 22),
+                  const SizedBox(width: 4),
+                  Text(
+                    accommodation!.rating!.toStringAsFixed(1),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (accommodation.totalReviews != null)
+                    Text(
+                      ' (${accommodation.totalReviews})',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Add review form (if eligible)
+        if (isLoggedIn && !hasReviewed)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.green.withOpacity(0.2)),
+            ),
+            child: buildReviewForm(
+              onSubmit: (rating, comment) async {
+                final acc = accommodation;
+                if (acc == null || acc.id == null) return;
+                await ref.read(reviewServiceProvider).createReview(
+                  accommodationId: acc.id!, // safe non-null
+                  rating: rating,
+                  comment: comment,
+                );
+                reviewNotifier.fetchReviews(refresh: true);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review submitted!')));
+              },
+            ),
+          ),
+        if (!isLoggedIn)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text('Log in to add a review.', style: TextStyle(color: Colors.grey[700], fontStyle: FontStyle.italic)),
+          ),
+        if (isLoggedIn && hasReviewed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text('You have already reviewed this accommodation.', style: TextStyle(color: Colors.grey[700], fontStyle: FontStyle.italic)),
+          ),
+
+        // Review list
+        if (reviewState.isLoading)
+          const Center(child: CircularProgressIndicator()),
+        if (!reviewState.isLoading && reviewState.reviews.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!, width: 1),
+            ),
+            child: const Text(
+              'No reviews yet. Be the first to review!',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ),
+        if (reviewState.reviews.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 32),
+            child: Column(
+              children: [
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: reviewState.reviews.length,
+                  separatorBuilder: (_, __) => const Divider(height: 24),
+                  itemBuilder: (context, i) {
+                    final review = reviewState.reviews[i];
+                    final isOwn = isLoggedIn && review.userId == user?.authId;
+                    final isEditing = editingIndex == i;
+                    if (isEditing) {
+                      return buildReviewForm(
+                        initialRating: editingRating,
+                        initialComment: editingComment,
+                        onSubmit: (rating, comment) async {
+                          await ref.read(reviewServiceProvider).updateReview(
+                            reviewId: review.id,
+                            rating: rating,
+                            comment: comment,
+                          );
+                          setState(() {
+                            _editingIndex = null;
+                            _editingRating = null;
+                            _editingComment = null;
+                          });
+                          reviewNotifier.fetchReviews(refresh: true);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review updated!')));
+                        },
+                        onCancel: () {
+                          setState(() {
+                            _editingIndex = null;
+                            _editingRating = null;
+                            _editingComment = null;
+                          });
+                        },
+                      );
+                    }
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Row(
+                        children: [
+                          ...List.generate(5, (j) => Icon(
+                            j < review.rating ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 20,
+                          )),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              review.userName,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(review.comment),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            _formatDate(review.createdAt.toIso8601String()),
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          ),
+                          if (isOwn) ...[
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.edit, size: 18),
+                              tooltip: 'Edit',
+                              onPressed: () {
+                                setState(() {
+                                  _editingIndex = i;
+                                  _editingRating = review.rating;
+                                  _editingComment = review.comment;
+                                });
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, size: 18),
+                              tooltip: 'Delete',
+                              onPressed: () async {
+                                await ref.read(reviewServiceProvider).deleteReview(reviewId: review.id);
+                                reviewNotifier.fetchReviews(refresh: true);
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review deleted!')));
+                              },
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                // Add extra space to guarantee no overflow
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        const SizedBox(height: 24),
+      ],
     );
   }
 }
