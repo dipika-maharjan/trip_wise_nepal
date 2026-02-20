@@ -4,6 +4,7 @@ import 'package:trip_wise_nepal/features/booking/presentation/view_model/booking
 import 'package:trip_wise_nepal/features/booking/domain/entities/booking_entity.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/state/booking_state.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
+import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
 
 class BookingDetailScreen extends ConsumerWidget {
   final String bookingId;
@@ -29,10 +30,23 @@ class BookingDetailScreen extends ConsumerWidget {
     double basePrice = (booking.totalPrice ?? 0) / 1.13;
     double tax = (booking.totalPrice ?? 0) - basePrice;
     double extrasTotal = 0.0;
+    if (booking.extras.isNotEmpty) {
+      for (final extra in booking.extras) {
+        extrasTotal += extra.total;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Booking Detail'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => BookingListScreen()),
+            );
+          },
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -52,11 +66,16 @@ class BookingDetailScreen extends ConsumerWidget {
                     Text('Check-in: ${booking.checkIn?.toLocal().toString().split(' ')[0] ?? ''}'),
                     Text('Check-out: ${booking.checkOut?.toLocal().toString().split(' ')[0] ?? ''}'),
                     Text('Nights: ${booking.checkOut != null && booking.checkIn != null ? booking.checkOut.difference(booking.checkIn).inDays : ''}'),
-                    Text('Guests: ${booking.guests ?? ''}'),
-                    Text('Rooms: ${booking.roomsBooked ?? ''}'),
+                    Text('Guests: ${booking.guests.toString()}'),
+                    Text('Rooms: ${booking.roomsBooked.toString()}'),
                     if ((booking.status ?? '').isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text('Booking Status: ${booking.status ?? ''}'),
+                    ],
+                    if (booking.specialRequest != null && booking.specialRequest!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      const Text('Special Request:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(booking.specialRequest!),
                     ],
                   ],
                 ),

@@ -32,6 +32,7 @@ class BookingApiModel {
   final double totalPrice;
   final String status;
   final List<BookingExtra> extras;
+  final String? specialRequest;
 
   BookingApiModel({
     required this.id,
@@ -47,6 +48,7 @@ class BookingApiModel {
     required this.totalPrice,
     required this.status,
     required this.extras,
+    this.specialRequest,
   });
 
   factory BookingApiModel.fromJson(Map<String, dynamic> json) {
@@ -92,6 +94,7 @@ class BookingApiModel {
       totalPrice: (json['totalPrice'] ?? 0).toDouble(),
       status: json['bookingStatus'] ?? json['status'] ?? '',
       extras: extrasList,
+      specialRequest: json['specialRequest'],
     );
   }
 }
