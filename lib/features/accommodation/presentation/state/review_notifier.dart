@@ -9,13 +9,17 @@ final reviewNotifierProvider = StateNotifierProvider.family<ReviewNotifier, Revi
 );
 
 class ReviewNotifier extends StateNotifier<ReviewState> {
+    // Reset hasLoaded flag so reviews can be fetched again
+    void resetLoaded() {
+      state = state.copyWith(hasLoaded: false);
+    }
   final Ref ref;
   final String accommodationId;
 
   ReviewNotifier(this.ref, this.accommodationId) : super(ReviewState());
 
   Future<void> fetchReviews({bool refresh = false}) async {
-    if (state.isLoading) return;
+    if (state.isLoading || state.hasLoaded) return;
     final page = refresh ? 1 : state.page;
     state = state.copyWith(isLoading: true, error: null);
 
@@ -34,9 +38,15 @@ class ReviewNotifier extends StateNotifier<ReviewState> {
         isLoading: false,
         hasMore: hasMore,
         page: page + 1,
+        hasLoaded: true,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(error: e.toString(), hasLoaded: true);
+    } finally {
+      // Always set isLoading to false, even if an error or empty result
+      if (state.isLoading) {
+        state = state.copyWith(isLoading: false, hasLoaded: true);
+      }
     }
   }
 

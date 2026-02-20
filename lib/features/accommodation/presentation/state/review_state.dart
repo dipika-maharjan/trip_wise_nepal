@@ -6,6 +6,7 @@ class ReviewState {
   final bool hasMore;
   final int page;
   final String? error;
+  final bool hasLoaded;
 
   ReviewState({
     this.reviews = const [],
@@ -13,6 +14,7 @@ class ReviewState {
     this.hasMore = true,
     this.page = 1,
     this.error,
+    this.hasLoaded = false,
   });
 
   ReviewState copyWith({
@@ -21,13 +23,15 @@ class ReviewState {
     bool? hasMore,
     int? page,
     String? error,
+    bool? hasLoaded,
   }) {
     return ReviewState(
       reviews: reviews ?? this.reviews,
       isLoading: isLoading ?? this.isLoading,
       hasMore: hasMore ?? this.hasMore,
       page: page ?? this.page,
-      error: error,
+      error: error ?? this.error,
+      hasLoaded: hasLoaded ?? this.hasLoaded,
     );
   }
 }

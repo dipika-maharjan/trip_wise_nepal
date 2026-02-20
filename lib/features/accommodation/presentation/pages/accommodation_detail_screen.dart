@@ -1,6 +1,7 @@
 import 'package:trip_wise_nepal/features/accommodation/presentation/state/review_notifier.dart';
 import 'package:trip_wise_nepal/features/accommodation/data/services/review_service.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/state/review_state.dart';
+import 'package:dio/dio.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -605,8 +606,8 @@ class _AccommodationDetailScreenState extends ConsumerState<AccommodationDetailS
     final reviewState = ref.watch(reviewNotifierProvider(accommodation?.id ?? ''));
     final reviewNotifier = ref.read(reviewNotifierProvider(accommodation?.id ?? '').notifier);
 
-    // Fetch reviews on first build
-    if (accommodation != null && reviewState.reviews.isEmpty && !reviewState.isLoading) {
+    // Fetch reviews on first build (only if not already loaded)
+    if (accommodation != null && !reviewState.hasLoaded && !reviewState.isLoading) {
       Future.microtask(() => reviewNotifier.fetchReviews(refresh: true));
     }
 
@@ -736,6 +737,7 @@ class _AccommodationDetailScreenState extends ConsumerState<AccommodationDetailS
                   rating: rating,
                   comment: comment,
                 );
+                reviewNotifier.resetLoaded();
                 reviewNotifier.fetchReviews(refresh: true);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review submitted!')));
               },
@@ -798,6 +800,7 @@ class _AccommodationDetailScreenState extends ConsumerState<AccommodationDetailS
                             _editingRating = null;
                             _editingComment = null;
                           });
+                          reviewNotifier.resetLoaded();
                           reviewNotifier.fetchReviews(refresh: true);
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review updated!')));
                         },
@@ -858,9 +861,28 @@ class _AccommodationDetailScreenState extends ConsumerState<AccommodationDetailS
                               icon: const Icon(Icons.delete, size: 18),
                               tooltip: 'Delete',
                               onPressed: () async {
-                                await ref.read(reviewServiceProvider).deleteReview(reviewId: review.id);
-                                reviewNotifier.fetchReviews(refresh: true);
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review deleted!')));
+                                try {
+                                  await ref.read(reviewServiceProvider).deleteReview(reviewId: review.id);
+                                  reviewNotifier.resetLoaded();
+                                  reviewNotifier.fetchReviews(refresh: true);
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review deleted!')));
+                                } on DioException catch (e) {
+                                  if (e.response?.statusCode == 404) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Review not found or not authorized.')),
+                                    );
+                                    reviewNotifier.resetLoaded();
+                                    reviewNotifier.fetchReviews(refresh: true);
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Failed to delete review: \\${e.response?.data?['message'] ?? e.toString()}')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Failed to delete review: \\${e.toString()}')),
+                                  );
+                                }
                               },
                             ),
                           ],
