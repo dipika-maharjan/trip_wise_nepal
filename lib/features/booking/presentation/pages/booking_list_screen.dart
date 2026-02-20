@@ -13,6 +13,8 @@ import 'package:trip_wise_nepal/features/accommodation/data/datasources/remote/r
 import 'package:trip_wise_nepal/features/accommodation/data/datasources/remote/optional_extra_remote_datasource.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
+import 'package:trip_wise_nepal/features/booking/data/datasources/remote/booking_remote_datasource.dart';
+import 'package:trip_wise_nepal/features/booking/data/repositories/booking_repository.dart';
 
 class BookingListScreen extends ConsumerStatefulWidget {
   const BookingListScreen({Key? key}) : super(key: key);
@@ -161,6 +163,7 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
                                           List<RoomTypeEntity> roomTypes = [];
                                           List<OptionalExtraApiModel> optionalExtras = [];
                                           String token = '';
+                                          BookingEntity? latestBooking;
                                           try {
                                             final apiClient = ApiClient();
                                             final roomTypeDS = RoomTypeRemoteDataSource(apiClient: apiClient);
@@ -169,6 +172,11 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
                                             optionalExtras = await optionalExtraDS.getOptionalExtrasByAccommodationId(booking.accommodationId);
                                             const storage = FlutterSecureStorage();
                                             token = await storage.read(key: 'auth_token') ?? '';
+                                            // Fetch latest booking by ID to ensure extras are populated
+                                            final bookingApiClient = ApiClient();
+                                            final bookingRemoteDS = BookingRemoteDataSource(apiClient: bookingApiClient);
+                                            final bookingRepo = BookingRepository(datasource: bookingRemoteDS);
+                                            latestBooking = await bookingRepo.getBookingById(booking.id);
                                           } catch (e) {
                                             Navigator.of(context).pop();
                                             ScaffoldMessenger.of(context).showSnackBar(
@@ -188,7 +196,7 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
                                                 roomTypes: roomTypes,
                                                 optionalExtras: optionalExtras,
                                                 token: token,
-                                                booking: booking,
+                                                booking: latestBooking ?? booking,
                                                 isEdit: true,
                                               ),
                                             ),
