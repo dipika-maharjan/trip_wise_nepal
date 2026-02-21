@@ -4,6 +4,7 @@ import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_deta
 import 'package:trip_wise_nepal/features/accommodation/domain/entities/room_type_entity.dart';
 import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extra_api_model.dart';
 import 'package:dio/dio.dart';
+import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 
 class BookingFormScreen extends StatefulWidget {
   final String accommodationId;
@@ -240,7 +241,9 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         Future.delayed(const Duration(milliseconds: 500), () {
           if (widget.isEdit && widget.booking != null && widget.booking.id != null) {
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => BookingDetailScreen(bookingId: widget.booking.id)),
+              MaterialPageRoute(
+                builder: (context) => BottomScreenLayout(initialIndex: 2),
+              ),
               (route) => false,
             );
           } else {

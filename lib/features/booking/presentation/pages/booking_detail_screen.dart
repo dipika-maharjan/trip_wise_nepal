@@ -5,6 +5,7 @@ import 'package:trip_wise_nepal/features/booking/domain/entities/booking_entity.
 import 'package:trip_wise_nepal/features/booking/presentation/state/booking_state.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
+import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 
 class BookingDetailScreen extends ConsumerWidget {
   final String bookingId;
@@ -42,8 +43,11 @@ class BookingDetailScreen extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => BookingListScreen()),
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => BottomScreenLayout(initialIndex: 2),
+              ),
+              (route) => false,
             );
           },
         ),
