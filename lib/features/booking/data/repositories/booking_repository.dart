@@ -25,6 +25,7 @@ class BookingRepository {
         totalPrice: booking.totalPrice,
         status: booking.status,
         extras: booking.extras,
+        specialRequest: booking.specialRequest,
       );
     }).toList() ?? [];
   }
@@ -46,6 +47,7 @@ class BookingRepository {
       totalPrice: m.totalPrice,
       status: m.status,
       extras: m.extras,
+      specialRequest: m.specialRequest,
     );
   }
 
@@ -66,6 +68,7 @@ class BookingRepository {
       totalPrice: m.totalPrice,
       status: m.status,
       extras: m.extras,
+      specialRequest: m.specialRequest,
     );
   }
 

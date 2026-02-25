@@ -13,6 +13,7 @@ class BookingEntity {
   final double totalPrice;
   final String status;
   final List<BookingExtra> extras;
+  final String? specialRequest;
 
   BookingEntity({
     required this.id,
@@ -28,5 +29,6 @@ class BookingEntity {
     required this.totalPrice,
     required this.status,
     required this.extras,
+    this.specialRequest,
   });
 }

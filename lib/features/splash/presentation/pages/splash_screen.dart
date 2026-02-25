@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:trip_wise_nepal/features/auth/presentation/state/auth_state.dart';
+import 'package:trip_wise_nepal/features/auth/presentation/view_model/auth_view_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trip_wise_nepal/app/routes/app_routes.dart';
 import 'package:trip_wise_nepal/core/services/storage/user_session_service.dart';
@@ -16,7 +18,40 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _navigateToNext();
+    print('[DEBUG] SplashScreen: initState called');
+    Future.microtask(() => _initAuthAndNavigate());
+  }
+
+  Future<void> _initAuthAndNavigate() async {
+    print('[DEBUG] SplashScreen: _initAuthAndNavigate started');
+    try {
+      print('[DEBUG] SplashScreen: calling getCurrentUser');
+      await ref.read(authViewModelProvider.notifier)
+          .getCurrentUser()
+          .timeout(const Duration(seconds: 3), onTimeout: () {
+        print('[ERROR] getCurrentUser timed out in SplashScreen');
+        return null;
+      });
+      print('[DEBUG] SplashScreen: getCurrentUser completed');
+    } catch (e, st) {
+      print('[ERROR] Exception in getCurrentUser in SplashScreen: $e\n$st');
+    }
+
+    // Wait for auth state to be updated
+    int tries = 0;
+    while (tries < 10) {
+      final authState = ref.read(authViewModelProvider);
+      print('[DEBUG] SplashScreen: authState after getCurrentUser: status=${authState.status}, user=${authState.user}');
+      if (authState.status == AuthStatus.authenticated && authState.user != null) {
+        break;
+      }
+      await Future.delayed(const Duration(milliseconds: 100));
+      tries++;
+    }
+
+    print('[DEBUG] SplashScreen: calling _navigateToNext');
+    await _navigateToNext();
+    print('[DEBUG] SplashScreen: _navigateToNext completed');
   }
 
   Future<void> _navigateToNext() async {

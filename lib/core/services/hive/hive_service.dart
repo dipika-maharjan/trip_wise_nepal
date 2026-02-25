@@ -24,11 +24,13 @@ class HiveService {
   Future<void> init() async {
     final directory = await getApplicationDocumentsDirectory();
     final path = '${directory.path}/${HiveTableConstant.dbName}';
+    print('[DEBUG] HiveService.init: Hive path = $path');
     Hive.init(path);
 
     // register adapter
     _registerAdapter();
     await _openBoxes();
+    print('[DEBUG] HiveService.init: Boxes opened, keys in authBox = ${Hive.box<AuthHiveModel>(HiveTableConstant.authTable).keys.toList()}');
   }
 
   // Adapter register
@@ -40,7 +42,9 @@ class HiveService {
 
   // box open
   Future<void> _openBoxes() async {
+    print('[DEBUG] HiveService._openBoxes: Opening authBox');
     await Hive.openBox<AuthHiveModel>(HiveTableConstant.authTable);
+    print('[DEBUG] HiveService._openBoxes: authBox opened, keys = ${Hive.box<AuthHiveModel>(HiveTableConstant.authTable).keys.toList()}');
   }
 
   // box close
@@ -55,24 +59,31 @@ class HiveService {
 
   // Register user
   Future<AuthHiveModel> register(AuthHiveModel user) async {
+    print('[DEBUG] HiveService.register: saving user with authId = ${user.authId}');
     await _authBox.put(user.authId, user);
+    print('[DEBUG] HiveService.register: user saved = ${_authBox.get(user.authId)}');
     return user;
   }
 
   // Login - find user by email and password
   AuthHiveModel? login(String email, String password) {
     try {
-      return _authBox.values.firstWhere(
+      final user = _authBox.values.firstWhere(
         (user) => user.email == email && user.password == password,
       );
+      print('[DEBUG] HiveService.login: found user = $user');
+      return user;
     } catch (e) {
+      print('[DEBUG] HiveService.login: no user found for $email');
       return null;
     }
   }
 
   // Get user by ID
   AuthHiveModel? getUserById(String authId) {
-    return _authBox.get(authId);
+    final user = _authBox.get(authId);
+    print('[DEBUG] HiveService.getUserById: authId = $authId, user = $user');
+    return user;
   }
 
   // Get user by email

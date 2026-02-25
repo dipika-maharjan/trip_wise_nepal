@@ -34,6 +34,8 @@ class AuthLocalDatasource implements IAuthLocalDataSource {
     try {
       final user = _hiveService.login(email, password);
       if (user != null && user.authId != null) {
+        // Always save user to Hive to ensure persistence
+        await _hiveService.register(user);
         // Save user session to persist login across app restarts
         await _userSessionService.saveUserSession(
           userId: user.authId!,
@@ -52,20 +54,24 @@ class AuthLocalDatasource implements IAuthLocalDataSource {
   @override
   Future<AuthHiveModel?> getCurrentUser() async {
     try {
-      // Check if user is logged in
+      print('[DEBUG] getCurrentUser: Checking if user is logged in...');
       if (!_userSessionService.isLoggedIn()) {
+        print('[DEBUG] getCurrentUser: Not logged in');
         return null;
       }
 
-      // Get user ID from session
       final userId = _userSessionService.getCurrentUserId();
+      print('[DEBUG] getCurrentUser: userId from session = $userId');
       if (userId == null) {
+        print('[DEBUG] getCurrentUser: userId is null');
         return null;
       }
 
-      // Fetch user from Hive database
-      return _hiveService.getUserById(userId);
-    } catch (e) {
+      final user = _hiveService.getUserById(userId);
+      print('[DEBUG] getCurrentUser: user from Hive = $user');
+      return user;
+    } catch (e, st) {
+      print('[ERROR] getCurrentUser exception: $e\n$st');
       return null;
     }
   }

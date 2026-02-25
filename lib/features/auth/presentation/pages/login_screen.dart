@@ -29,6 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    print('[DEBUG] login_screen.dart: _handleLogin called');
     if (_emailController.text.trim().isEmpty ||
         _passwordController.text.isEmpty) {
       SnackbarUtils.showError(
@@ -39,6 +40,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     if (_formKey.currentState!.validate()) {
+      print('[DEBUG] login_screen.dart: calling authViewModelProvider.login');
       await ref.read(authViewModelProvider.notifier).login(
             email: _emailController.text.trim(),
             password: _passwordController.text,

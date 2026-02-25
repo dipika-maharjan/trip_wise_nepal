@@ -48,6 +48,7 @@ class AuthHiveModel extends HiveObject {
 
   // From Entity
   factory AuthHiveModel.fromEntity(AuthEntity entity) {
+    print('[DEBUG] AuthHiveModel.fromEntity: entity = $entity');
     return AuthHiveModel(
       authId: entity.authId,
       fullName: entity.fullName,

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
+import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_detail_screen.dart';
 import 'package:trip_wise_nepal/features/accommodation/domain/entities/room_type_entity.dart';
 import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extra_api_model.dart';
 import 'package:dio/dio.dart';
+import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 
 class BookingFormScreen extends StatefulWidget {
   final String accommodationId;
@@ -33,6 +35,7 @@ class BookingFormScreen extends StatefulWidget {
 }
 
 class _BookingFormScreenState extends State<BookingFormScreen> {
+  bool _prefilledExtras = false;
   @override
   void initState() {
     super.initState();
@@ -42,19 +45,91 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       _checkOutDate = booking.checkOut;
       _guests = booking.guests;
       _roomsBooked = booking.roomsBooked;
-      // _specialRequest = booking.specialRequest; // Uncomment if BookingEntity has this field
-      // Prefill selected room type
+      _specialRequest = booking.specialRequest ?? '';
       try {
         _selectedRoomType = widget.roomTypes.firstWhere((rt) => rt.id == booking.roomTypeId);
       } catch (_) {}
-      // Prefill extras
+      // DEBUG: Print structure of booking.extras
+      // ignore: avoid_print
+      print('[DEBUG] booking.extras at prefill:');
+      // ignore: avoid_print
+      print(booking.extras);
+      if (booking.extras is List && booking.extras.isNotEmpty && widget.optionalExtras.isNotEmpty) {
+        for (final extra in booking.extras) {
+          String? bookingExtraId;
+          int quantity = 1;
+          if (extra is Map) {
+            bookingExtraId = (extra['id'] ?? extra['extraId'] ?? extra['_id'])?.toString();
+            quantity = extra['quantity'] ?? 1;
+          } else {
+            try {
+              bookingExtraId = extra.id?.toString();
+              quantity = extra.quantity ?? 1;
+            } catch (_) {
+              bookingExtraId = null;
+              quantity = 1;
+            }
+          }
+          if (bookingExtraId != null) {
+            for (final opt in widget.optionalExtras) {
+              final optId = opt.id.toString();
+              if (optId == bookingExtraId) {
+                _extraQuantities[optId] = quantity;
+                break;
+              }
+            }
+          }
+        }
+        _prefilledExtras = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _calculateTotalPrice();
+        });
+      } else {
+        _calculateTotalPrice();
+      }
+    } else {
+      _calculateTotalPrice();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant BookingFormScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only prefill once, after both booking and optionalExtras are loaded
+    if (!_prefilledExtras && widget.isEdit && widget.booking != null && widget.optionalExtras.isNotEmpty) {
+      final booking = widget.booking;
       if (booking.extras is List && booking.extras.isNotEmpty) {
         for (final extra in booking.extras) {
-          _extraQuantities[extra.id] = extra.quantity;
+          String? bookingExtraId;
+          int quantity = 1;
+          if (extra is Map) {
+            bookingExtraId = (extra['id'] ?? extra['extraId'] ?? extra['_id'])?.toString();
+            quantity = extra['quantity'] ?? 1;
+          } else {
+            try {
+              bookingExtraId = extra.id?.toString();
+              quantity = extra.quantity ?? 1;
+            } catch (_) {
+              bookingExtraId = null;
+              quantity = 1;
+            }
+          }
+          if (bookingExtraId != null) {
+            for (final opt in widget.optionalExtras) {
+              final optId = opt.id.toString();
+              if (optId == bookingExtraId) {
+                _extraQuantities[optId] = quantity;
+                break;
+              }
+            }
+          }
         }
+        _prefilledExtras = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _calculateTotalPrice();
+        });
       }
     }
-    _calculateTotalPrice();
   }
   final _formKey = GlobalKey<FormState>();
   RoomTypeEntity? _selectedRoomType;
@@ -164,21 +239,42 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       if (isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.isEdit ? 'Booking updated!' : 'Booking submitted!')));
         Future.delayed(const Duration(milliseconds: 500), () {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => BookingListScreen()),
-            (route) => false,
-          );
+          if (widget.isEdit && widget.booking != null && widget.booking.id != null) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => BottomScreenLayout(initialIndex: 2),
+              ),
+              (route) => false,
+            );
+          } else {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => BookingListScreen()),
+              (route) => false,
+            );
+          }
         });
       } else {
-        setState(() { _error = response.data['message'] ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.'); });
+        final errorMsg = response.data['message'] ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.');
+        setState(() { _error = errorMsg; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg)),
+        );
       }
     } catch (e) {
       if (e is DioException && e.response != null) {
         print('[DEBUG] Booking error response: ${e.response?.data}');
-        setState(() { _error = (widget.isEdit ? 'Update failed: ' : 'Booking failed: ') + (e.response?.data?.toString() ?? e.toString()); });
+        final errorMsg = e.response?.data['message']?.toString() ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.');
+        setState(() { _error = errorMsg; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg)),
+        );
       } else {
         print('[DEBUG] Booking error: $e');
-        setState(() { _error = (widget.isEdit ? 'Update failed: ' : 'Booking failed: ') + e.toString(); });
+        final errorMsg = (widget.isEdit ? 'Update failed: ' : 'Booking failed: ') + e.toString();
+        setState(() { _error = errorMsg; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg)),
+        );
       }
     } finally {
       setState(() { _isLoading = false; });
@@ -281,6 +377,139 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                 },
                 validator: (val) => val == null ? 'Select a room type' : null,
               ),
+              const SizedBox(height: 16),
+              // Check-in Date
+              const Text('Check-in Date *', style: TextStyle(fontWeight: FontWeight.bold)),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () async {
+                        final now = DateTime.now();
+                        final firstDate = now;
+                        final initialDate = _checkInDate != null && _checkInDate!.isAfter(firstDate)
+                            ? _checkInDate!
+                            : firstDate;
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: initialDate,
+                          firstDate: firstDate,
+                          lastDate: now.add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _checkInDate = picked;
+                            if (_checkOutDate != null && _checkOutDate!.isBefore(picked)) {
+                              _checkOutDate = null;
+                            }
+                          });
+                          _calculateTotalPrice();
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          hintText: 'mm/dd/yyyy',
+                          border: OutlineInputBorder(),
+                        ),
+                        child: Text(
+                          _checkInDate != null
+                              ? '${_checkInDate!.month.toString().padLeft(2, '0')}/${_checkInDate!.day.toString().padLeft(2, '0')}/${_checkInDate!.year}'
+                              : 'mm/dd/yyyy',
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.calendar_today),
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      final firstDate = now;
+                      final initialDate = _checkInDate != null && _checkInDate!.isAfter(firstDate)
+                          ? _checkInDate!
+                          : firstDate;
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: initialDate,
+                        firstDate: firstDate,
+                        lastDate: now.add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _checkInDate = picked;
+                          if (_checkOutDate != null && _checkOutDate!.isBefore(picked)) {
+                            _checkOutDate = null;
+                          }
+                        });
+                        _calculateTotalPrice();
+                      }
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Check-out Date
+              const Text('Check-out Date *', style: TextStyle(fontWeight: FontWeight.bold)),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () async {
+                        final now = DateTime.now();
+                        final firstDate = _checkInDate != null ? _checkInDate!.add(const Duration(days: 1)) : now.add(const Duration(days: 1));
+                        final initialDate = _checkOutDate != null && _checkOutDate!.isAfter(firstDate)
+                            ? _checkOutDate!
+                            : firstDate;
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: initialDate,
+                          firstDate: firstDate,
+                          lastDate: now.add(const Duration(days: 366)),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _checkOutDate = picked;
+                          });
+                          _calculateTotalPrice();
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          hintText: 'mm/dd/yyyy',
+                          border: OutlineInputBorder(),
+                        ),
+                        child: Text(
+                          _checkOutDate != null
+                              ? '${_checkOutDate!.month.toString().padLeft(2, '0')}/${_checkOutDate!.day.toString().padLeft(2, '0')}/${_checkOutDate!.year}'
+                              : 'mm/dd/yyyy',
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.calendar_today),
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      final firstDate = _checkInDate != null ? _checkInDate!.add(const Duration(days: 1)) : now.add(const Duration(days: 1));
+                      final initialDate = _checkOutDate != null && _checkOutDate!.isAfter(firstDate)
+                          ? _checkOutDate!
+                          : firstDate;
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: initialDate,
+                        firstDate: firstDate,
+                        lastDate: now.add(const Duration(days: 366)),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _checkOutDate = picked;
+                        });
+                        _calculateTotalPrice();
+                      }
+                    },
+                  ),
+                ],
+              ),
+              
               const SizedBox(height: 16),
               // Number of guests
               const Text('Number of Guests *', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -440,7 +669,30 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Base Price: Rs. ${basePriceTotal.toStringAsFixed(2)}'),
-                      Text('Extras: Rs. ${extrasTotal.toStringAsFixed(2)}'),
+                      if (widget.optionalExtras.any((e) => (_extraQuantities[e.id] ?? 0) > 0)) ...[
+                        const SizedBox(height: 4),
+                        const Text('Optional Extras:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ...widget.optionalExtras.where((e) => (_extraQuantities[e.id] ?? 0) > 0).map((e) {
+                          final quantity = _extraQuantities[e.id] ?? 0;
+                          final price = e.priceType == 'per_person'
+                              ? (e.price ?? 0) * _guests * quantity
+                              : (e.price ?? 0) * quantity;
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 8.0, bottom: 2),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(child: Text('${e.name} x$quantity', overflow: TextOverflow.ellipsis)),
+                                Text('Rs. ${price.toStringAsFixed(2)}'),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        const SizedBox(height: 4),
+                        Text('Extras Total: Rs. ${extrasTotal.toStringAsFixed(2)}'),
+                      ] else ...[
+                        Text('Extras: Rs. 0.00'),
+                      ],
                       Text('Tax (13%): Rs. ${tax.toStringAsFixed(2)}'),
                       const Divider(),
                       Text('Total Price: Rs. ${_totalPrice.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

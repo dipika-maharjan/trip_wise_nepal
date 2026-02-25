@@ -81,17 +81,24 @@ class AuthViewModel extends Notifier<AuthState> {
   }
 
   Future<void> getCurrentUser() async {
+    print('[DEBUG] AuthViewModel.getCurrentUser: called');
     state = state.copyWith(status: AuthStatus.loading);
 
     final result = await _getCurrentUserUsecase();
+    print('[DEBUG] AuthViewModel.getCurrentUser: result = $result');
 
     result.fold(
-      (failure) => state = state.copyWith(
-        status: AuthStatus.unauthenticated,
-        errorMessage: failure.message,
-      ),
-      (user) =>
-          state = state.copyWith(status: AuthStatus.authenticated, user: user),
+      (failure) {
+        print('[DEBUG] AuthViewModel.getCurrentUser: failure = ${failure.message}');
+        state = state.copyWith(
+          status: AuthStatus.unauthenticated,
+          errorMessage: failure.message,
+        );
+      },
+      (user) {
+        print('[DEBUG] AuthViewModel.getCurrentUser: user restored = $user');
+        state = state.copyWith(status: AuthStatus.authenticated, user: user);
+      },
     );
   }
 

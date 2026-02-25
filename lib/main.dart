@@ -19,7 +19,9 @@ Future<void> main() async {
   );
 
   // Initialize Hive database
+  print('[DEBUG] main.dart: Initializing HiveService');
   await HiveService.instance.init();
+  print('[DEBUG] main.dart: HiveService initialized');
 
   // Initialize SharedPreferences
   // This is required because SharedPreferences is async,
