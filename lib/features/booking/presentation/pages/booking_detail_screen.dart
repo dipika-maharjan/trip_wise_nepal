@@ -8,6 +8,25 @@ import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 
 class BookingDetailScreen extends ConsumerWidget {
+
+    static Future<void> _startEsewaPayment({required double amount, required String bookingId, required BuildContext context}) async {
+      // TODO: Replace with actual eSewa payment integration logic
+      // For now, show a dialog to simulate payment
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('eSewa Payment'),
+          content: Text('Simulating eSewa payment for Rs. ${amount.toStringAsFixed(2)} (Booking ID: $bookingId)'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      // After payment, you may want to update booking/payment status here
+    }
   final String bookingId;
 
   const BookingDetailScreen({Key? key, required this.bookingId}) : super(key: key);
@@ -37,6 +56,14 @@ class BookingDetailScreen extends ConsumerWidget {
       }
     }
 
+    // Format expiry if available
+    String? expiresAtStr;
+    if (booking.expiresAt != null) {
+      try {
+        final dt = DateTime.parse(booking.expiresAt!);
+        expiresAtStr = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      } catch (_) {}
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Booking Detail'),
@@ -57,6 +84,30 @@ class BookingDetailScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if ((booking.paymentStatus == null || booking.paymentStatus == 'pending' || booking.paymentStatus == 'unpaid') && expiresAtStr != null) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Your booking will expire 2 hours after creation (Expires at: $expiresAtStr). Please complete payment before expiry.',
+                        style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 15),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -154,6 +205,23 @@ class BookingDetailScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 20),
+            // Payment button for unpaid bookings
+            if (booking.paymentStatus == null || booking.paymentStatus == 'pending' || booking.paymentStatus == 'unpaid') ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await _startEsewaPayment(amount: booking.totalPrice ?? 0, bookingId: booking.id, context: context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF136767),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Pay with eSewa', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
           ],
         ),
       ),
