@@ -14,6 +14,8 @@ class BookingEntity {
   final String status;
   final List<BookingExtra> extras;
   final String? specialRequest;
+  final String? paymentStatus;
+  final String? expiresAt;
 
   BookingEntity({
     required this.id,
@@ -30,5 +32,7 @@ class BookingEntity {
     required this.status,
     required this.extras,
     this.specialRequest,
+    this.paymentStatus,
+    this.expiresAt,
   });
 }

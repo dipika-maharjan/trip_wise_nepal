@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_detail_screen.dart';
@@ -6,6 +7,25 @@ import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extr
 import 'package:dio/dio.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 
+  Future<void> _startEsewaPayment({required double amount, required String bookingId, required BuildContext context}) async {
+    // TODO: Replace with actual eSewa payment integration logic
+    // For now, show a dialog to simulate payment
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('eSewa Payment'),
+        content: Text('Simulating eSewa payment for Rs. ${amount.toStringAsFixed(2)} (Booking ID: $bookingId)'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    // After payment, you may want to update booking/payment status here
+  }
+
 class BookingFormScreen extends StatefulWidget {
   final String accommodationId;
   final String accommodationName;
@@ -13,11 +33,12 @@ class BookingFormScreen extends StatefulWidget {
   final String accommodationLocation;
   final List<RoomTypeEntity> roomTypes;
   final List<OptionalExtraApiModel> optionalExtras;
-  final String token; // JWT for Authorization
-  final dynamic booking;
+  final String token;
   final bool isEdit;
+  final dynamic booking;
 
   const BookingFormScreen({
+    Key? key,
     required this.accommodationId,
     required this.accommodationName,
     required this.accommodationImage,
@@ -25,112 +46,18 @@ class BookingFormScreen extends StatefulWidget {
     required this.roomTypes,
     required this.optionalExtras,
     required this.token,
-    this.booking,
     this.isEdit = false,
-    super.key,
-  });
+    this.booking,
+  }) : super(key: key);
 
   @override
   State<BookingFormScreen> createState() => _BookingFormScreenState();
 }
 
 class _BookingFormScreenState extends State<BookingFormScreen> {
-  bool _prefilledExtras = false;
-  @override
-  void initState() {
-    super.initState();
-    if (widget.isEdit && widget.booking != null) {
-      final booking = widget.booking;
-      _checkInDate = booking.checkIn;
-      _checkOutDate = booking.checkOut;
-      _guests = booking.guests;
-      _roomsBooked = booking.roomsBooked;
-      _specialRequest = booking.specialRequest ?? '';
-      try {
-        _selectedRoomType = widget.roomTypes.firstWhere((rt) => rt.id == booking.roomTypeId);
-      } catch (_) {}
-      // DEBUG: Print structure of booking.extras
-      // ignore: avoid_print
-      print('[DEBUG] booking.extras at prefill:');
-      // ignore: avoid_print
-      print(booking.extras);
-      if (booking.extras is List && booking.extras.isNotEmpty && widget.optionalExtras.isNotEmpty) {
-        for (final extra in booking.extras) {
-          String? bookingExtraId;
-          int quantity = 1;
-          if (extra is Map) {
-            bookingExtraId = (extra['id'] ?? extra['extraId'] ?? extra['_id'])?.toString();
-            quantity = extra['quantity'] ?? 1;
-          } else {
-            try {
-              bookingExtraId = extra.id?.toString();
-              quantity = extra.quantity ?? 1;
-            } catch (_) {
-              bookingExtraId = null;
-              quantity = 1;
-            }
-          }
-          if (bookingExtraId != null) {
-            for (final opt in widget.optionalExtras) {
-              final optId = opt.id.toString();
-              if (optId == bookingExtraId) {
-                _extraQuantities[optId] = quantity;
-                break;
-              }
-            }
-          }
-        }
-        _prefilledExtras = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _calculateTotalPrice();
-        });
-      } else {
-        _calculateTotalPrice();
-      }
-    } else {
-      _calculateTotalPrice();
-    }
-  }
+  // ...existing state fields and methods...
 
-  @override
-  void didUpdateWidget(covariant BookingFormScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Only prefill once, after both booking and optionalExtras are loaded
-    if (!_prefilledExtras && widget.isEdit && widget.booking != null && widget.optionalExtras.isNotEmpty) {
-      final booking = widget.booking;
-      if (booking.extras is List && booking.extras.isNotEmpty) {
-        for (final extra in booking.extras) {
-          String? bookingExtraId;
-          int quantity = 1;
-          if (extra is Map) {
-            bookingExtraId = (extra['id'] ?? extra['extraId'] ?? extra['_id'])?.toString();
-            quantity = extra['quantity'] ?? 1;
-          } else {
-            try {
-              bookingExtraId = extra.id?.toString();
-              quantity = extra.quantity ?? 1;
-            } catch (_) {
-              bookingExtraId = null;
-              quantity = 1;
-            }
-          }
-          if (bookingExtraId != null) {
-            for (final opt in widget.optionalExtras) {
-              final optId = opt.id.toString();
-              if (optId == bookingExtraId) {
-                _extraQuantities[optId] = quantity;
-                break;
-              }
-            }
-          }
-        }
-        _prefilledExtras = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _calculateTotalPrice();
-        });
-      }
-    }
-  }
+  // ...existing code...
   final _formKey = GlobalKey<FormState>();
   RoomTypeEntity? _selectedRoomType;
   DateTime? _checkInDate;
@@ -172,10 +99,10 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     });
   }
 
-  Future<void> _submit() async {
+  Future<String?> _submit({required String paymentType}) async {
     if (!_formKey.currentState!.validate() || _selectedRoomType == null || _checkInDate == null || _checkOutDate == null) {
       setState(() { _error = 'Please fill all required fields.'; });
-      return;
+      return null;
     }
     setState(() { _isLoading = true; _error = null; });
 
@@ -200,7 +127,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       "roomsBooked": _roomsBooked,
       "extras": extrasPayload,
       "specialRequest": _specialRequest ?? '',
-      "paymentStatus": "pending"
+      "paymentStatus": paymentType
     };
 
     try {
@@ -237,28 +164,34 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       print('[DEBUG] Booking response: ${response.statusCode} ${response.data}');
       final isSuccess = (widget.isEdit ? response.statusCode == 200 : response.statusCode == 201) && response.data['success'] == true;
       if (isSuccess) {
+        final bookingId = widget.isEdit ? widget.booking.id : response.data['booking']?['id']?.toString();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.isEdit ? 'Booking updated!' : 'Booking submitted!')));
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (widget.isEdit && widget.booking != null && widget.booking.id != null) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => BottomScreenLayout(initialIndex: 2),
-              ),
-              (route) => false,
-            );
-          } else {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => BookingListScreen()),
-              (route) => false,
-            );
-          }
-        });
+        // Only navigate away if not using eSewa payment (i.e., pay later)
+        if (paymentType == 'pending') {
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (widget.isEdit && widget.booking != null && widget.booking.id != null) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => BottomScreenLayout(initialIndex: 2),
+                ),
+                (route) => false,
+              );
+            } else {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => BookingListScreen()),
+                (route) => false,
+              );
+            }
+          });
+        }
+        return bookingId;
       } else {
         final errorMsg = response.data['message'] ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.');
         setState(() { _error = errorMsg; });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMsg)),
         );
+        return null;
       }
     } catch (e) {
       if (e is DioException && e.response != null) {
@@ -276,6 +209,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           SnackBar(content: Text(errorMsg)),
         );
       }
+      return null;
     } finally {
       setState(() { _isLoading = false; });
     }
@@ -283,6 +217,11 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+        // Debug print for roomTypes
+        print('[DEBUG] Room types passed to BookingFormScreen:');
+        for (final rt in widget.roomTypes) {
+          print('  - ${rt.name} | isActive: ${rt.isActive} | pricePerNight: ${rt.pricePerNight}');
+        }
     double basePriceTotal = 0.0;
     double extrasTotal = 0.0;
     double tax = 0.0;
@@ -643,20 +582,76 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              // Confirm booking
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF136767),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+              // Payment options: eSewa button, warning, then Pay Later button
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () async {
+                      // Confirm Booking & Pay with eSewa
+                      final bookingId = await _submit(paymentType: 'esewa');
+                      if (bookingId != null) {
+                        await _startEsewaPayment(amount: _totalPrice, bookingId: bookingId, context: context);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF136767),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Confirm Booking and Pay with eSewa',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
                   ),
-                  child: Text(
-                    widget.isEdit ? 'Update Booking' : 'Confirm Booking',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 12),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Your booking will expire 2 hours after creation. Please complete payment before expiry.',
+                            style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 15),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () async {
+                      // Confirm Booking & Pay Later
+                      final bookingId = await _submit(paymentType: 'pending');
+                      if (bookingId != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Booking reserved for 2 hours. Please complete payment before expiry.')),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[700],
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Confirm Booking and Pay Later',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               // Booking summary
