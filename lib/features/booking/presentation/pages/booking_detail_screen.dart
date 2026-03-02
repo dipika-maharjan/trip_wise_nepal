@@ -1,32 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/view_model/booking_view_model.dart';
 import 'package:trip_wise_nepal/features/booking/domain/entities/booking_entity.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/state/booking_state.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
+import 'package:trip_wise_nepal/features/booking/presentation/pages/esewa_webview_page.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 
 class BookingDetailScreen extends ConsumerWidget {
 
-    static Future<void> _startEsewaPayment({required double amount, required String bookingId, required BuildContext context}) async {
-      // TODO: Replace with actual eSewa payment integration logic
-      // For now, show a dialog to simulate payment
-      await showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('eSewa Payment'),
-          content: Text('Simulating eSewa payment for Rs. ${amount.toStringAsFixed(2)} (Booking ID: $bookingId)'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      // After payment, you may want to update booking/payment status here
-    }
+    // Removed simulation. Use real WebView payment below.
   final String bookingId;
 
   const BookingDetailScreen({Key? key, required this.bookingId}) : super(key: key);
@@ -35,6 +21,7 @@ class BookingDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bookingState = ref.watch(bookingViewModelProvider);
     final booking = bookingState.selectedBooking;
+    debugPrint('Booking paymentStatus: \\${booking?.paymentStatus}');
     // If not loaded or wrong booking, fetch
     if (booking == null || booking.id != bookingId) {
       if (bookingState.status == BookingStatus.error) {
@@ -126,6 +113,10 @@ class BookingDetailScreen extends ConsumerWidget {
                     if ((booking.status ?? '').isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text('Booking Status: ${booking.status ?? ''}'),
+                      if ((booking.paymentStatus ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text('Payment Status: ${booking.paymentStatus ?? ''}'),
+                      ],
                     ],
                     if (booking.specialRequest != null && booking.specialRequest!.trim().isNotEmpty) ...[
                       const SizedBox(height: 8),
@@ -211,7 +202,97 @@ class BookingDetailScreen extends ConsumerWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    await _startEsewaPayment(amount: booking.totalPrice ?? 0, bookingId: booking.id, context: context);
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                    try {
+                      print('Starting payment initiation...');
+                      final uri = Uri.parse('http://192.168.101.10:5050/api/payment/esewa/initiate');
+                      print('POST to: ' + uri.toString());
+                      print('POST body: bookingId=' + booking.id);
+                      final response = await http.post(
+                        uri,
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonEncode({
+                          'bookingId': booking.id,
+                          'amount': booking.totalPrice ?? 0,
+                        }),
+                      );
+                      print('Response status: ' + response.statusCode.toString());
+                      print('Response body: ' + response.body);
+                      if (response.statusCode == 200) {
+                        final data = jsonDecode(response.body);
+                        final formAction = data['esewaUrl'];
+                        final fieldsRaw = data['formData'];
+                        if (formAction == null || fieldsRaw == null) {
+                          await showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Payment Error'),
+                              content: const Text('Invalid payment response from server.'),
+                              actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+                            ),
+                          );
+                          return;
+                        }
+                        final fields = (fieldsRaw as Map).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+                        final result = await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (ctx) => EsewaWebViewPage(
+                              formAction: formAction.toString(),
+                              fields: fields,
+                            ),
+                          ),
+                        );
+                        if (result == true) {
+                          // Refresh booking to update payment status
+                          await ref.read(bookingViewModelProvider.notifier).getBookingById(bookingId);
+                          await showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('eSewa Payment'),
+                              content: const Text('Payment Successful!'),
+                              actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+                            ),
+                          );
+                        } else if (result == false) {
+                          await showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('eSewa Payment'),
+                              content: const Text('Payment Failed or Cancelled.'),
+                              actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+                            ),
+                          );
+                        }
+                      } else {
+                        debugPrint('Payment initiation failed. Status: ${response.statusCode}');
+                        debugPrint('Response body: ${response.body}');
+                        await showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Payment initiation failed'),
+                            content: Text('Status: ${response.statusCode}\n${response.body}'),
+                            actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+                          ),
+                        );
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(content: Text('Payment initiation failed (Status: ${response.statusCode}): ${response.body}')),
+                        );
+                      }
+                    } catch (e, st) {
+                      print('Exception during payment initiation: $e');
+                      print('Stacktrace: $st');
+                      await showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Payment initiation error'),
+                          content: Text('Exception: $e'),
+                          actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+                        ),
+                      );
+                      scaffoldMessenger.showSnackBar(
+                        SnackBar(content: Text('Payment initiation failed: $e')),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF136767),

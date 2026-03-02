@@ -1,0 +1,716 @@
+diff --git a/lib/features/booking/data/models/booking_api_model.dart b/lib/features/booking/data/models/booking_api_model.dart
+index d61b218..989e915 100644
+--- a/lib/features/booking/data/models/booking_api_model.dart
++++ b/lib/features/booking/data/models/booking_api_model.dart
+@@ -32,6 +32,7 @@ class BookingApiModel {
+   final double totalPrice;
+   final String status;
+   final List<BookingExtra> extras;
++  final String? specialRequest;
+ 
+   BookingApiModel({
+     required this.id,
+@@ -47,6 +48,7 @@ class BookingApiModel {
+     required this.totalPrice,
+     required this.status,
+     required this.extras,
++    this.specialRequest,
+   });
+ 
+   factory BookingApiModel.fromJson(Map<String, dynamic> json) {
+@@ -92,6 +94,7 @@ class BookingApiModel {
+       totalPrice: (json['totalPrice'] ?? 0).toDouble(),
+       status: json['bookingStatus'] ?? json['status'] ?? '',
+       extras: extrasList,
++      specialRequest: json['specialRequest'],
+     );
+   }
+ }
+diff --git a/lib/features/booking/data/repositories/booking_repository.dart b/lib/features/booking/data/repositories/booking_repository.dart
+index 6ffc560..b9fdcbc 100644
+--- a/lib/features/booking/data/repositories/booking_repository.dart
++++ b/lib/features/booking/data/repositories/booking_repository.dart
+@@ -25,6 +25,7 @@ class BookingRepository {
+         totalPrice: booking.totalPrice,
+         status: booking.status,
+         extras: booking.extras,
++        specialRequest: booking.specialRequest,
+       );
+     }).toList() ?? [];
+   }
+@@ -46,6 +47,7 @@ class BookingRepository {
+       totalPrice: m.totalPrice,
+       status: m.status,
+       extras: m.extras,
++      specialRequest: m.specialRequest,
+     );
+   }
+ 
+@@ -66,6 +68,7 @@ class BookingRepository {
+       totalPrice: m.totalPrice,
+       status: m.status,
+       extras: m.extras,
++      specialRequest: m.specialRequest,
+     );
+   }
+ 
+diff --git a/lib/features/booking/domain/entities/booking_entity.dart b/lib/features/booking/domain/entities/booking_entity.dart
+index b3f6920..f5fa6bc 100644
+--- a/lib/features/booking/domain/entities/booking_entity.dart
++++ b/lib/features/booking/domain/entities/booking_entity.dart
+@@ -13,6 +13,9 @@ class BookingEntity {
+   final double totalPrice;
+   final String status;
+   final List<BookingExtra> extras;
++  final String? specialRequest;
++  final String? paymentStatus;
++  final String? expiresAt;
+ 
+   BookingEntity({
+     required this.id,
+@@ -28,5 +31,8 @@ class BookingEntity {
+     required this.totalPrice,
+     required this.status,
+     required this.extras,
++    this.specialRequest,
++    this.paymentStatus,
++    this.expiresAt,
+   });
+ }
+diff --git a/lib/features/booking/presentation/pages/booking_detail_screen.dart b/lib/features/booking/presentation/pages/booking_detail_screen.dart
+index 51e8dbb..7898468 100644
+--- a/lib/features/booking/presentation/pages/booking_detail_screen.dart
++++ b/lib/features/booking/presentation/pages/booking_detail_screen.dart
+@@ -4,8 +4,29 @@ import 'package:trip_wise_nepal/features/booking/presentation/view_model/booking
+ import 'package:trip_wise_nepal/features/booking/domain/entities/booking_entity.dart';
+ import 'package:trip_wise_nepal/features/booking/presentation/state/booking_state.dart';
+ import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
++import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
++import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
+ 
+ class BookingDetailScreen extends ConsumerWidget {
++
++    static Future<void> _startEsewaPayment({required double amount, required String bookingId, required BuildContext context}) async {
++      // TODO: Replace with actual eSewa payment integration logic
++      // For now, show a dialog to simulate payment
++      await showDialog(
++        context: context,
++        builder: (ctx) => AlertDialog(
++          title: const Text('eSewa Payment'),
++          content: Text('Simulating eSewa payment for Rs. ${amount.toStringAsFixed(2)} (Booking ID: $bookingId)'),
++          actions: [
++            TextButton(
++              onPressed: () => Navigator.of(ctx).pop(),
++              child: const Text('OK'),
++            ),
++          ],
++        ),
++      );
++      // After payment, you may want to update booking/payment status here
++    }
+   final String bookingId;
+ 
+   const BookingDetailScreen({Key? key, required this.bookingId}) : super(key: key);
+@@ -29,16 +50,64 @@ class BookingDetailScreen extends ConsumerWidget {
+     double basePrice = (booking.totalPrice ?? 0) / 1.13;
+     double tax = (booking.totalPrice ?? 0) - basePrice;
+     double extrasTotal = 0.0;
++    if (booking.extras.isNotEmpty) {
++      for (final extra in booking.extras) {
++        extrasTotal += extra.total;
++      }
++    }
+ 
++    // Format expiry if available
++    String? expiresAtStr;
++    if (booking.expiresAt != null) {
++      try {
++        final dt = DateTime.parse(booking.expiresAt!);
++        expiresAtStr = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
++      } catch (_) {}
++    }
+     return Scaffold(
+       appBar: AppBar(
+         title: const Text('Booking Detail'),
++        leading: IconButton(
++          icon: const Icon(Icons.arrow_back),
++          onPressed: () {
++            Navigator.of(context).pushAndRemoveUntil(
++              MaterialPageRoute(
++                builder: (context) => BottomScreenLayout(initialIndex: 2),
++              ),
++              (route) => false,
++            );
++          },
++        ),
+       ),
+       body: SingleChildScrollView(
+         padding: const EdgeInsets.all(16.0),
+         child: Column(
+           crossAxisAlignment: CrossAxisAlignment.start,
+           children: [
++            if ((booking.paymentStatus == null || booking.paymentStatus == 'pending' || booking.paymentStatus == 'unpaid') && expiresAtStr != null) ...[
++              Container(
++                margin: const EdgeInsets.only(bottom: 12),
++                padding: const EdgeInsets.all(12),
++                decoration: BoxDecoration(
++                  color: Colors.orange.withOpacity(0.08),
++                  borderRadius: BorderRadius.circular(8),
++                  border: Border.all(color: Colors.orange.withOpacity(0.2)),
++                ),
++                child: Row(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
++                    const SizedBox(width: 10),
++                    Expanded(
++                      child: Text(
++                        'Your booking will expire 2 hours after creation (Expires at: $expiresAtStr). Please complete payment before expiry.',
++                        style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 15),
++                      ),
++                    ),
++                  ],
++                ),
++              ),
++            ],
+             Card(
+               child: Padding(
+                 padding: const EdgeInsets.all(12.0),
+@@ -52,12 +121,17 @@ class BookingDetailScreen extends ConsumerWidget {
+                     Text('Check-in: ${booking.checkIn?.toLocal().toString().split(' ')[0] ?? ''}'),
+                     Text('Check-out: ${booking.checkOut?.toLocal().toString().split(' ')[0] ?? ''}'),
+                     Text('Nights: ${booking.checkOut != null && booking.checkIn != null ? booking.checkOut.difference(booking.checkIn).inDays : ''}'),
+-                    Text('Guests: ${booking.guests ?? ''}'),
+-                    Text('Rooms: ${booking.roomsBooked ?? ''}'),
++                    Text('Guests: ${booking.guests.toString()}'),
++                    Text('Rooms: ${booking.roomsBooked.toString()}'),
+                     if ((booking.status ?? '').isNotEmpty) ...[
+                       const SizedBox(height: 4),
+                       Text('Booking Status: ${booking.status ?? ''}'),
+                     ],
++                    if (booking.specialRequest != null && booking.specialRequest!.trim().isNotEmpty) ...[
++                      const SizedBox(height: 8),
++                      const Text('Special Request:', style: TextStyle(fontWeight: FontWeight.bold)),
++                      Text(booking.specialRequest!),
++                    ],
+                   ],
+                 ),
+               ),
+@@ -131,6 +205,23 @@ class BookingDetailScreen extends ConsumerWidget {
+               ),
+             ),
+             const SizedBox(height: 20),
++            // Payment button for unpaid bookings
++            if (booking.paymentStatus == null || booking.paymentStatus == 'pending' || booking.paymentStatus == 'unpaid') ...[
++              SizedBox(
++                width: double.infinity,
++                child: ElevatedButton(
++                  onPressed: () async {
++                    await _startEsewaPayment(amount: booking.totalPrice ?? 0, bookingId: booking.id, context: context);
++                  },
++                  style: ElevatedButton.styleFrom(
++                    backgroundColor: const Color(0xFF136767),
++                    padding: const EdgeInsets.symmetric(vertical: 16),
++                  ),
++                  child: const Text('Pay with eSewa', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
++                ),
++              ),
++              const SizedBox(height: 12),
++            ],
+           ],
+         ),
+       ),
+diff --git a/lib/features/booking/presentation/pages/booking_form_screen.dart b/lib/features/booking/presentation/pages/booking_form_screen.dart
+index 54b516e..21e6954 100644
+--- a/lib/features/booking/presentation/pages/booking_form_screen.dart
++++ b/lib/features/booking/presentation/pages/booking_form_screen.dart
+@@ -1,8 +1,30 @@
++
+ import 'package:flutter/material.dart';
+ import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
++import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_detail_screen.dart';
+ import 'package:trip_wise_nepal/features/accommodation/domain/entities/room_type_entity.dart';
+ import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extra_api_model.dart';
+ import 'package:dio/dio.dart';
++import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
++
++  Future<void> _startEsewaPayment({required double amount, required String bookingId, required BuildContext context}) async {
++    // TODO: Replace with actual eSewa payment integration logic
++    // For now, show a dialog to simulate payment
++    await showDialog(
++      context: context,
++      builder: (ctx) => AlertDialog(
++        title: const Text('eSewa Payment'),
++        content: Text('Simulating eSewa payment for Rs. ${amount.toStringAsFixed(2)} (Booking ID: $bookingId)'),
++        actions: [
++          TextButton(
++            onPressed: () => Navigator.of(ctx).pop(),
++            child: const Text('OK'),
++          ),
++        ],
++      ),
++    );
++    // After payment, you may want to update booking/payment status here
++  }
+ 
+ class BookingFormScreen extends StatefulWidget {
+   final String accommodationId;
+@@ -11,11 +33,12 @@ class BookingFormScreen extends StatefulWidget {
+   final String accommodationLocation;
+   final List<RoomTypeEntity> roomTypes;
+   final List<OptionalExtraApiModel> optionalExtras;
+-  final String token; // JWT for Authorization
+-  final dynamic booking;
++  final String token;
+   final bool isEdit;
++  final dynamic booking;
+ 
+   const BookingFormScreen({
++    Key? key,
+     required this.accommodationId,
+     required this.accommodationName,
+     required this.accommodationImage,
+@@ -23,39 +46,18 @@ class BookingFormScreen extends StatefulWidget {
+     required this.roomTypes,
+     required this.optionalExtras,
+     required this.token,
+-    this.booking,
+     this.isEdit = false,
+-    super.key,
+-  });
++    this.booking,
++  }) : super(key: key);
+ 
+   @override
+   State<BookingFormScreen> createState() => _BookingFormScreenState();
+ }
+ 
+ class _BookingFormScreenState extends State<BookingFormScreen> {
+-  @override
+-  void initState() {
+-    super.initState();
+-    if (widget.isEdit && widget.booking != null) {
+-      final booking = widget.booking;
+-      _checkInDate = booking.checkIn;
+-      _checkOutDate = booking.checkOut;
+-      _guests = booking.guests;
+-      _roomsBooked = booking.roomsBooked;
+-      // _specialRequest = booking.specialRequest; // Uncomment if BookingEntity has this field
+-      // Prefill selected room type
+-      try {
+-        _selectedRoomType = widget.roomTypes.firstWhere((rt) => rt.id == booking.roomTypeId);
+-      } catch (_) {}
+-      // Prefill extras
+-      if (booking.extras is List && booking.extras.isNotEmpty) {
+-        for (final extra in booking.extras) {
+-          _extraQuantities[extra.id] = extra.quantity;
+-        }
+-      }
+-    }
+-    _calculateTotalPrice();
+-  }
++  // ...existing state fields and methods...
++
++  // ...existing code...
+   final _formKey = GlobalKey<FormState>();
+   RoomTypeEntity? _selectedRoomType;
+   DateTime? _checkInDate;
+@@ -97,10 +99,10 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
+     });
+   }
+ 
+-  Future<void> _submit() async {
++  Future<String?> _submit({required String paymentType}) async {
+     if (!_formKey.currentState!.validate() || _selectedRoomType == null || _checkInDate == null || _checkOutDate == null) {
+       setState(() { _error = 'Please fill all required fields.'; });
+-      return;
++      return null;
+     }
+     setState(() { _isLoading = true; _error = null; });
+ 
+@@ -125,7 +127,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
+       "roomsBooked": _roomsBooked,
+       "extras": extrasPayload,
+       "specialRequest": _specialRequest ?? '',
+-      "paymentStatus": "pending"
++      "paymentStatus": paymentType
+     };
+ 
+     try {
+@@ -162,24 +164,52 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
+       print('[DEBUG] Booking response: ${response.statusCode} ${response.data}');
+       final isSuccess = (widget.isEdit ? response.statusCode == 200 : response.statusCode == 201) && response.data['success'] == true;
+       if (isSuccess) {
++        final bookingId = widget.isEdit ? widget.booking.id : response.data['booking']?['id']?.toString();
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.isEdit ? 'Booking updated!' : 'Booking submitted!')));
+-        Future.delayed(const Duration(milliseconds: 500), () {
+-          Navigator.of(context).pushAndRemoveUntil(
+-            MaterialPageRoute(builder: (context) => BookingListScreen()),
+-            (route) => false,
+-          );
+-        });
++        // Only navigate away if not using eSewa payment (i.e., pay later)
++        if (paymentType == 'pending') {
++          Future.delayed(const Duration(milliseconds: 500), () {
++            if (widget.isEdit && widget.booking != null && widget.booking.id != null) {
++              Navigator.of(context).pushAndRemoveUntil(
++                MaterialPageRoute(
++                  builder: (context) => BottomScreenLayout(initialIndex: 2),
++                ),
++                (route) => false,
++              );
++            } else {
++              Navigator.of(context).pushAndRemoveUntil(
++                MaterialPageRoute(builder: (context) => BookingListScreen()),
++                (route) => false,
++              );
++            }
++          });
++        }
++        return bookingId;
+       } else {
+-        setState(() { _error = response.data['message'] ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.'); });
++        final errorMsg = response.data['message'] ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.');
++        setState(() { _error = errorMsg; });
++        ScaffoldMessenger.of(context).showSnackBar(
++          SnackBar(content: Text(errorMsg)),
++        );
++        return null;
+       }
+     } catch (e) {
+       if (e is DioException && e.response != null) {
+         print('[DEBUG] Booking error response: ${e.response?.data}');
+-        setState(() { _error = (widget.isEdit ? 'Update failed: ' : 'Booking failed: ') + (e.response?.data?.toString() ?? e.toString()); });
++        final errorMsg = e.response?.data['message']?.toString() ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.');
++        setState(() { _error = errorMsg; });
++        ScaffoldMessenger.of(context).showSnackBar(
++          SnackBar(content: Text(errorMsg)),
++        );
+       } else {
+         print('[DEBUG] Booking error: $e');
+-        setState(() { _error = (widget.isEdit ? 'Update failed: ' : 'Booking failed: ') + e.toString(); });
++        final errorMsg = (widget.isEdit ? 'Update failed: ' : 'Booking failed: ') + e.toString();
++        setState(() { _error = errorMsg; });
++        ScaffoldMessenger.of(context).showSnackBar(
++          SnackBar(content: Text(errorMsg)),
++        );
+       }
++      return null;
+     } finally {
+       setState(() { _isLoading = false; });
+     }
+@@ -187,6 +217,11 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
+ 
+   @override
+   Widget build(BuildContext context) {
++        // Debug print for roomTypes
++        print('[DEBUG] Room types passed to BookingFormScreen:');
++        for (final rt in widget.roomTypes) {
++          print('  - ${rt.name} | isActive: ${rt.isActive} | pricePerNight: ${rt.pricePerNight}');
++        }
+     double basePriceTotal = 0.0;
+     double extrasTotal = 0.0;
+     double tax = 0.0;
+@@ -281,6 +316,139 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
+                 },
+                 validator: (val) => val == null ? 'Select a room type' : null,
+               ),
++              const SizedBox(height: 16),
++              // Check-in Date
++              const Text('Check-in Date *', style: TextStyle(fontWeight: FontWeight.bold)),
++              Row(
++                children: [
++                  Expanded(
++                    child: InkWell(
++                      onTap: () async {
++                        final now = DateTime.now();
++                        final firstDate = now;
++                        final initialDate = _checkInDate != null && _checkInDate!.isAfter(firstDate)
++                            ? _checkInDate!
++                            : firstDate;
++                        final picked = await showDatePicker(
++                          context: context,
++                          initialDate: initialDate,
++                          firstDate: firstDate,
++                          lastDate: now.add(const Duration(days: 365)),
++                        );
++                        if (picked != null) {
++                          setState(() {
++                            _checkInDate = picked;
++                            if (_checkOutDate != null && _checkOutDate!.isBefore(picked)) {
++                              _checkOutDate = null;
++                            }
++                          });
++                          _calculateTotalPrice();
++                        }
++                      },
++                      child: InputDecorator(
++                        decoration: const InputDecoration(
++                          hintText: 'mm/dd/yyyy',
++                          border: OutlineInputBorder(),
++                        ),
++                        child: Text(
++                          _checkInDate != null
++                              ? '${_checkInDate!.month.toString().padLeft(2, '0')}/${_checkInDate!.day.toString().padLeft(2, '0')}/${_checkInDate!.year}'
++                              : 'mm/dd/yyyy',
++                        ),
++                      ),
++                    ),
++                  ),
++                  IconButton(
++                    icon: const Icon(Icons.calendar_today),
++                    onPressed: () async {
++                      final now = DateTime.now();
++                      final firstDate = now;
++                      final initialDate = _checkInDate != null && _checkInDate!.isAfter(firstDate)
++                          ? _checkInDate!
++                          : firstDate;
++                      final picked = await showDatePicker(
++                        context: context,
++                        initialDate: initialDate,
++                        firstDate: firstDate,
++                        lastDate: now.add(const Duration(days: 365)),
++                      );
++                      if (picked != null) {
++                        setState(() {
++                          _checkInDate = picked;
++                          if (_checkOutDate != null && _checkOutDate!.isBefore(picked)) {
++                            _checkOutDate = null;
++                          }
++                        });
++                        _calculateTotalPrice();
++                      }
++                    },
++                  ),
++                ],
++              ),
++              const SizedBox(height: 12),
++              // Check-out Date
++              const Text('Check-out Date *', style: TextStyle(fontWeight: FontWeight.bold)),
++              Row(
++                children: [
++                  Expanded(
++                    child: InkWell(
++                      onTap: () async {
++                        final now = DateTime.now();
++                        final firstDate = _checkInDate != null ? _checkInDate!.add(const Duration(days: 1)) : now.add(const Duration(days: 1));
++                        final initialDate = _checkOutDate != null && _checkOutDate!.isAfter(firstDate)
++                            ? _checkOutDate!
++                            : firstDate;
++                        final picked = await showDatePicker(
++                          context: context,
++                          initialDate: initialDate,
++                          firstDate: firstDate,
++                          lastDate: now.add(const Duration(days: 366)),
++                        );
++                        if (picked != null) {
++                          setState(() {
++                            _checkOutDate = picked;
++                          });
++                          _calculateTotalPrice();
++                        }
++                      },
++                      child: InputDecorator(
++                        decoration: const InputDecoration(
++                          hintText: 'mm/dd/yyyy',
++                          border: OutlineInputBorder(),
++                        ),
++                        child: Text(
++                          _checkOutDate != null
++                              ? '${_checkOutDate!.month.toString().padLeft(2, '0')}/${_checkOutDate!.day.toString().padLeft(2, '0')}/${_checkOutDate!.year}'
++                              : 'mm/dd/yyyy',
++                        ),
++                      ),
++                    ),
++                  ),
++                  IconButton(
++                    icon: const Icon(Icons.calendar_today),
++                    onPressed: () async {
++                      final now = DateTime.now();
++                      final firstDate = _checkInDate != null ? _checkInDate!.add(const Duration(days: 1)) : now.add(const Duration(days: 1));
++                      final initialDate = _checkOutDate != null && _checkOutDate!.isAfter(firstDate)
++                          ? _checkOutDate!
++                          : firstDate;
++                      final picked = await showDatePicker(
++                        context: context,
++                        initialDate: initialDate,
++                        firstDate: firstDate,
++                        lastDate: now.add(const Duration(days: 366)),
++                      );
++                      if (picked != null) {
++                        setState(() {
++                          _checkOutDate = picked;
++                        });
++                        _calculateTotalPrice();
++                      }
++                    },
++                  ),
++                ],
++              ),
++              
+               const SizedBox(height: 16),
+               // Number of guests
+               const Text('Number of Guests *', style: TextStyle(fontWeight: FontWeight.bold)),
+@@ -414,20 +582,76 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
+                 },
+               ),
+               const SizedBox(height: 24),
+-              // Confirm booking
+-              SizedBox(
+-                width: double.infinity,
+-                child: ElevatedButton(
+-                  onPressed: _isLoading ? null : _submit,
+-                  style: ElevatedButton.styleFrom(
+-                    backgroundColor: const Color(0xFF136767),
+-                    padding: const EdgeInsets.symmetric(vertical: 16),
++              // Payment options: eSewa button, warning, then Pay Later button
++              Column(
++                crossAxisAlignment: CrossAxisAlignment.stretch,
++                children: [
++                  ElevatedButton(
++                    onPressed: _isLoading ? null : () async {
++                      // Confirm Booking & Pay with eSewa
++                      final bookingId = await _submit(paymentType: 'esewa');
++                      if (bookingId != null) {
++                        await _startEsewaPayment(amount: _totalPrice, bookingId: bookingId, context: context);
++                      }
++                    },
++                    style: ElevatedButton.styleFrom(
++                      backgroundColor: const Color(0xFF136767),
++                      padding: const EdgeInsets.symmetric(vertical: 16),
++                    ),
++                    child: const Center(
++                      child: Text(
++                        'Confirm Booking and Pay with eSewa',
++                        textAlign: TextAlign.center,
++                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
++                      ),
++                    ),
+                   ),
+-                  child: Text(
+-                    widget.isEdit ? 'Update Booking' : 'Confirm Booking',
+-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
++                  const SizedBox(height: 12),
++                  Container(
++                    margin: const EdgeInsets.only(bottom: 12),
++                    padding: const EdgeInsets.all(12),
++                    decoration: BoxDecoration(
++                      color: Colors.orange.withOpacity(0.08),
++                      borderRadius: BorderRadius.circular(8),
++                      border: Border.all(color: Colors.orange.withOpacity(0.2)),
++                    ),
++                    child: Row(
++                      crossAxisAlignment: CrossAxisAlignment.start,
++                      children: [
++                        const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
++                        const SizedBox(width: 10),
++                        Expanded(
++                          child: Text(
++                            'Your booking will expire 2 hours after creation. Please complete payment before expiry.',
++                            style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 15),
++                          ),
++                        ),
++                      ],
++                    ),
+                   ),
+-                ),
++                  ElevatedButton(
++                    onPressed: _isLoading ? null : () async {
++                      // Confirm Booking & Pay Later
++                      final bookingId = await _submit(paymentType: 'pending');
++                      if (bookingId != null) {
++                        ScaffoldMessenger.of(context).showSnackBar(
++                          const SnackBar(content: Text('Booking reserved for 2 hours. Please complete payment before expiry.')),
++                        );
++                      }
++                    },
++                    style: ElevatedButton.styleFrom(
++                      backgroundColor: Colors.grey[700],
++                      padding: const EdgeInsets.symmetric(vertical: 16),
++                    ),
++                    child: const Center(
++                      child: Text(
++                        'Confirm Booking and Pay Later',
++                        textAlign: TextAlign.center,
++                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
++                      ),
++                    ),
++                  ),
++                ],
+               ),
+               const SizedBox(height: 24),
+               // Booking summary
+@@ -440,7 +664,30 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Text('Base Price: Rs. ${basePriceTotal.toStringAsFixed(2)}'),
+-                      Text('Extras: Rs. ${extrasTotal.toStringAsFixed(2)}'),
++                      if (widget.optionalExtras.any((e) => (_extraQuantities[e.id] ?? 0) > 0)) ...[
++                        const SizedBox(height: 4),
++                        const Text('Optional Extras:', style: TextStyle(fontWeight: FontWeight.bold)),
++                        ...widget.optionalExtras.where((e) => (_extraQuantities[e.id] ?? 0) > 0).map((e) {
++                          final quantity = _extraQuantities[e.id] ?? 0;
++                          final price = e.priceType == 'per_person'
++                              ? (e.price ?? 0) * _guests * quantity
++                              : (e.price ?? 0) * quantity;
++                          return Padding(
++                            padding: const EdgeInsets.only(left: 8.0, bottom: 2),
++                            child: Row(
++                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
++                              children: [
++                                Expanded(child: Text('${e.name} x$quantity', overflow: TextOverflow.ellipsis)),
++                                Text('Rs. ${price.toStringAsFixed(2)}'),
++                              ],
++                            ),
++                          );
++                        }).toList(),
++                        const SizedBox(height: 4),
++                        Text('Extras Total: Rs. ${extrasTotal.toStringAsFixed(2)}'),
++                      ] else ...[
++                        Text('Extras: Rs. 0.00'),
++                      ],
+                       Text('Tax (13%): Rs. ${tax.toStringAsFixed(2)}'),
+                       const Divider(),
+                       Text('Total Price: Rs. ${_totalPrice.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+diff --git a/lib/features/booking/presentation/pages/booking_list_screen.dart b/lib/features/booking/presentation/pages/booking_list_screen.dart
+index 12538df..a79644f 100644
+--- a/lib/features/booking/presentation/pages/booking_list_screen.dart
++++ b/lib/features/booking/presentation/pages/booking_list_screen.dart
+@@ -13,6 +13,8 @@ import 'package:trip_wise_nepal/features/accommodation/data/datasources/remote/r
+ import 'package:trip_wise_nepal/features/accommodation/data/datasources/remote/optional_extra_remote_datasource.dart';
+ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+ import 'package:dio/dio.dart';
++import 'package:trip_wise_nepal/features/booking/data/datasources/remote/booking_remote_datasource.dart';
++import 'package:trip_wise_nepal/features/booking/data/repositories/booking_repository.dart';
+ 
+ class BookingListScreen extends ConsumerStatefulWidget {
+   const BookingListScreen({Key? key}) : super(key: key);
+@@ -161,6 +163,7 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
+                                           List<RoomTypeEntity> roomTypes = [];
+                                           List<OptionalExtraApiModel> optionalExtras = [];
+                                           String token = '';
++                                          BookingEntity? latestBooking;
+                                           try {
+                                             final apiClient = ApiClient();
+                                             final roomTypeDS = RoomTypeRemoteDataSource(apiClient: apiClient);
+@@ -169,6 +172,11 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
+                                             optionalExtras = await optionalExtraDS.getOptionalExtrasByAccommodationId(booking.accommodationId);
+                                             const storage = FlutterSecureStorage();
+                                             token = await storage.read(key: 'auth_token') ?? '';
++                                            // Fetch latest booking by ID to ensure extras are populated
++                                            final bookingApiClient = ApiClient();
++                                            final bookingRemoteDS = BookingRemoteDataSource(apiClient: bookingApiClient);
++                                            final bookingRepo = BookingRepository(datasource: bookingRemoteDS);
++                                            latestBooking = await bookingRepo.getBookingById(booking.id);
+                                           } catch (e) {
+                                             Navigator.of(context).pop();
+                                             ScaffoldMessenger.of(context).showSnackBar(
+@@ -188,7 +196,7 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
+                                                 roomTypes: roomTypes,
+                                                 optionalExtras: optionalExtras,
+                                                 token: token,
+-                                                booking: booking,
++                                                booking: latestBooking ?? booking,
+                                                 isEdit: true,
+                                               ),
+                                             ),

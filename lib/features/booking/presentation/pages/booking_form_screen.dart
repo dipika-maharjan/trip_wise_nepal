@@ -217,11 +217,16 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-        // Debug print for roomTypes
-        print('[DEBUG] Room types passed to BookingFormScreen:');
-        for (final rt in widget.roomTypes) {
-          print('  - ${rt.name} | isActive: ${rt.isActive} | pricePerNight: ${rt.pricePerNight}');
-        }
+    // Debug print for roomTypes
+    print('[DEBUG] Room types passed to BookingFormScreen:');
+    for (final rt in widget.roomTypes) {
+      print('  - \\${rt.name} | isActive: \\${rt.isActive} | pricePerNight: \\${rt.pricePerNight}');
+    }
+    // Debug print for optionalExtras
+    print('[DEBUG] Optional extras passed to BookingFormScreen:');
+    for (final ex in widget.optionalExtras) {
+      print('  - \\${ex.name} | isActive: \\${ex.isActive} | price: \\${ex.price}');
+    }
     double basePriceTotal = 0.0;
     double extrasTotal = 0.0;
     double tax = 0.0;
