@@ -41,11 +41,25 @@ class _AccommodationDetailScreenState
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      ref
-          .read(accommodationViewModelProvider.notifier)
-          .getAccommodationById(widget.accommodationId);
+    Future.microtask(() async {
+      ref.read(accommodationViewModelProvider.notifier).getAccommodationById(widget.accommodationId);
+      await _fetchRoomTypes();
+      await _fetchOptionalExtras();
     });
+  }
+
+  Future<void> _fetchRoomTypes() async {
+    setState(() { _roomTypesLoading = true; _roomTypesError = null; });
+    try {
+      final apiClient = ApiClient();
+      final ds = RoomTypeRemoteDataSource(apiClient: apiClient);
+      final types = await ds.getRoomTypesByAccommodationId(widget.accommodationId);
+      setState(() { _roomTypes = types; });
+    } catch (e) {
+      setState(() { _roomTypesError = 'Failed to load room types'; });
+    } finally {
+      setState(() { _roomTypesLoading = false; });
+    }
   }
 
   MapViewModel? _mapViewModel;
@@ -733,24 +747,14 @@ class _AccommodationDetailScreenState
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _roomTypesLoading
+                            onPressed: _roomTypesLoading || _optionalExtrasLoading || _roomTypes.isEmpty
                                 ? null
                                 : () async {
-                                    final storage =
-                                        const FlutterSecureStorage();
-                                    final token =
-                                        await storage.read(key: 'auth_token') ??
-                                        '';
-                                    print('[DEBUG] Booking token: $token');
+                                    final storage = const FlutterSecureStorage();
+                                    final token = await storage.read(key: 'auth_token') ?? '';
                                     if (token.isEmpty) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'No valid token found. Please log in again.',
-                                          ),
-                                        ),
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('No valid token found. Please log in again.')),
                                       );
                                       return;
                                     }
@@ -758,17 +762,12 @@ class _AccommodationDetailScreenState
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => BookingFormScreen(
-                                          accommodationId:
-                                              accommodation.id ?? '',
+                                          accommodationId: accommodation.id ?? '',
                                           accommodationName: accommodation.name,
-                                          accommodationImage:
-                                              (accommodation.images.isNotEmpty)
-                                              ? ImageUrlHelper.buildImageUrl(
-                                                  accommodation.images[0],
-                                                )
+                                          accommodationImage: (accommodation.images.isNotEmpty)
+                                              ? ImageUrlHelper.buildImageUrl(accommodation.images[0])
                                               : '',
-                                          accommodationLocation:
-                                              accommodation.address,
+                                          accommodationLocation: accommodation.address,
                                           roomTypes: _roomTypes,
                                           optionalExtras: _optionalExtras,
                                           token: token,
@@ -780,7 +779,7 @@ class _AccommodationDetailScreenState
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: const Color(0xFF136767),
                             ),
-                            child: _roomTypesLoading
+                            child: (_roomTypesLoading || _optionalExtrasLoading)
                                 ? const SizedBox(
                                     height: 20,
                                     width: 20,
