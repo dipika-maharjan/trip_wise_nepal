@@ -1,30 +1,12 @@
-
 import 'package:flutter/material.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_detail_screen.dart';
+import 'dart:convert';
 import 'package:trip_wise_nepal/features/accommodation/domain/entities/room_type_entity.dart';
 import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extra_api_model.dart';
 import 'package:dio/dio.dart';
+import 'package:trip_wise_nepal/features/booking/presentation/pages/esewa_webview_page.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
-
-  Future<void> _startEsewaPayment({required double amount, required String bookingId, required BuildContext context}) async {
-    // TODO: Replace with actual eSewa payment integration logic
-    // For now, show a dialog to simulate payment
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('eSewa Payment'),
-        content: Text('Simulating eSewa payment for Rs. ${amount.toStringAsFixed(2)} (Booking ID: $bookingId)'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-    // After payment, you may want to update booking/payment status here
-  }
 
 class BookingFormScreen extends StatefulWidget {
   final String accommodationId;
@@ -56,6 +38,157 @@ class BookingFormScreen extends StatefulWidget {
 
 class _BookingFormScreenState extends State<BookingFormScreen> {
   // ...existing state fields and methods...
+
+  Future<void> _startEsewaPayment({required double amount, required String bookingId, required BuildContext context}) async {
+    print('[DEBUG] Starting eSewa payment: amount=$amount, bookingId=$bookingId');
+    try {
+      final dio = Dio();
+      final response = await dio.post(
+        'http://10.0.2.2:5050/api/payment/esewa/initiate',
+        data: {
+          'amount': amount,
+          'bookingId': bookingId,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${widget.token}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+      print('[DEBUG] eSewa initiate response: status=${response.statusCode}, data=${response.data}');
+      if (response.statusCode == 200 && response.data['esewaUrl'] != null && response.data['formData'] != null) {
+        final esewaUrl = response.data['esewaUrl'] ?? '';
+        dynamic formData = response.data['formData'] ?? {};
+        print('[DEBUG] esewaUrl: $esewaUrl');
+        print('[DEBUG] formData: $formData');
+        print('[DEBUG] formData type: ${formData.runtimeType}');
+        print('[DEBUG] esewaUrl.isNotEmpty: ${esewaUrl.isNotEmpty}');
+
+        // If formData is a String, try to decode as JSON
+        if (formData is String) {
+          print('[DEBUG] formData is String, attempting to decode as JSON');
+          try {
+            formData = Map<String, dynamic>.from(jsonDecode(formData));
+            print('[DEBUG] Decoded formData: $formData');
+            print('[DEBUG] Decoded formData type: ${formData.runtimeType}');
+          } catch (e) {
+            print('[DEBUG] Failed to decode formData string: $e');
+          }
+        }
+
+        print('[DEBUG] formData is Map: ${formData is Map}');
+        print('[DEBUG] formData.isNotEmpty: ${(formData is Map) ? formData.isNotEmpty : 'N/A'}');
+
+        if (esewaUrl.isNotEmpty && formData is Map && formData.isNotEmpty) {
+          print('[DEBUG] formData keys: ${formData.keys}');
+          if (esewaUrl.contains('localhost') || esewaUrl.contains('127.0.0.1')) {
+            await showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Warning'),
+                content: const Text('The callback URL for eSewa payment is set to localhost. Please use a public URL for real payments.'),
+                actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+              ),
+            );
+          }
+          // Convert all formData values to String
+          final fields = formData.map((key, value) => MapEntry(key.toString(), value.toString()));
+          try {
+            final paymentResult = await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => EsewaWebViewPage(
+                  formAction: esewaUrl,
+                  fields: fields,
+                ),
+              ),
+            );
+            // If paymentResult is true (success), POST to backend and refresh booking
+            if (paymentResult == true) {
+              try {
+                // Always use the latest booking's transaction_uuid
+                final latestBooking = widget.booking;
+                final transactionUuid = latestBooking?.transactionUuid ?? latestBooking?.transaction_uuid ?? fields['transaction_uuid'] ?? '';
+                final productCode = fields['product_code'] ?? 'EPAYTEST';
+                final totalAmount = fields['total_amount'] ?? amount.toString();
+                print('[DEBUG] Using transactionUuid for payment confirmation: $transactionUuid');
+                if (transactionUuid.isNotEmpty) {
+                  final dio = Dio();
+                  final response = await dio.get(
+                    'http://10.0.2.2:5050/api/payment/esewa/success',
+                    queryParameters: {
+                      'product_code': productCode,
+                      'total_amount': totalAmount,
+                      'transaction_uuid': transactionUuid,
+                    },
+                  );
+                  print('[DEBUG] Payment confirmation GET response: statusCode=${response.statusCode}, data=${response.data}');
+                } else {
+                  print('[DEBUG] transactionUuid is empty, cannot confirm payment');
+                }
+              } catch (e) {
+                print('[DEBUG] Error sending payment confirmation GET: $e');
+                if (e is DioError) {
+                  print('[DEBUG] DioError details: response=${e.response}, type=${e.type}, message=${e.message}');
+                }
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Payment successful!')),
+              );
+              // After payment, navigate directly to BookingDetailScreen for this booking
+              final bookingId = widget.isEdit
+                  ? widget.booking?.id
+                  : widget.booking?.id; // fallback to booking id
+              if (bookingId != null) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => BookingDetailScreen(bookingId: bookingId)),
+                  (route) => false,
+                );
+              } else {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => BottomScreenLayout(initialIndex: 2)),
+                  (route) => false,
+                );
+              }
+            } else if (paymentResult == false) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Payment failed or cancelled.')),
+              );
+            }
+          } catch (err, stack) {
+            print('[DEBUG] Exception while pushing EsewaWebViewPage: $err');
+            print('[DEBUG] Stack trace: $stack');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error opening eSewa payment page: $err')),
+            );
+          }
+        } else {
+          print('[DEBUG] ENTERED ELSE BLOCK for eSewa payment initiation failure');
+          print('[DEBUG] esewaUrl: $esewaUrl');
+          print('[DEBUG] formData: $formData');
+          print('[DEBUG] formData type: ${formData.runtimeType}');
+          print('[DEBUG] esewaUrl.isNotEmpty: ${esewaUrl.isNotEmpty}');
+          print('[DEBUG] formData is Map: ${formData is Map}');
+          print('[DEBUG] formData.isNotEmpty: ${(formData is Map) ? formData.isNotEmpty : 'N/A'}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to initiate eSewa payment. Please try again.')),
+          );
+        }
+      } else {
+        final errorMsg = response.data['message'] ?? 'Failed to initiate eSewa payment.';
+        print('[DEBUG] eSewa payment error: $errorMsg');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg)),
+        );
+      }
+    } catch (e) {
+      print('[DEBUG] Exception in _startEsewaPayment: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error initiating eSewa payment: $e')),
+      );
+    }
+  }
 
   // ...existing code...
   final _formKey = GlobalKey<FormState>();
@@ -118,6 +251,14 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       }
     }
 
+    // Generate transaction_uuid for new booking
+    String transactionUuid;
+    if (widget.isEdit && widget.booking != null && widget.booking.transactionUuid != null) {
+      transactionUuid = widget.booking.transactionUuid;
+    } else {
+      transactionUuid = 'booking-${widget.accommodationId}-${DateTime.now().millisecondsSinceEpoch}';
+    }
+    // Always send paymentStatus: 'pending' for both eSewa and Pay Later
     final payload = {
       "accommodationId": widget.accommodationId,
       "roomTypeId": _selectedRoomType!.id,
@@ -127,7 +268,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       "roomsBooked": _roomsBooked,
       "extras": extrasPayload,
       "specialRequest": _specialRequest ?? '',
-      "paymentStatus": paymentType
+      "paymentStatus": "pending",
+      "transaction_uuid": transactionUuid
     };
 
     try {
@@ -164,24 +306,19 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       print('[DEBUG] Booking response: ${response.statusCode} ${response.data}');
       final isSuccess = (widget.isEdit ? response.statusCode == 200 : response.statusCode == 201) && response.data['success'] == true;
       if (isSuccess) {
-        final bookingId = widget.isEdit ? widget.booking.id : response.data['booking']?['id']?.toString();
+        final bookingId = widget.isEdit
+            ? widget.booking.id
+            : response.data['data']?['booking']?['_id']?.toString();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.isEdit ? 'Booking updated!' : 'Booking submitted!')));
-        // Only navigate away if not using eSewa payment (i.e., pay later)
+        // Always navigate to BottomScreenLayout with booking tab selected so bottom navigation is present
         if (paymentType == 'pending') {
           Future.delayed(const Duration(milliseconds: 500), () {
-            if (widget.isEdit && widget.booking != null && widget.booking.id != null) {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) => BottomScreenLayout(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-            } else {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => BookingListScreen()),
-                (route) => false,
-              );
-            }
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => BottomScreenLayout(initialIndex: 2),
+              ),
+              (route) => false,
+            );
           });
         }
         return bookingId;
@@ -593,10 +730,21 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                 children: [
                   ElevatedButton(
                     onPressed: _isLoading ? null : () async {
-                      // Confirm Booking & Pay with eSewa
+                      print('[DEBUG] Pay with eSewa button pressed');
                       final bookingId = await _submit(paymentType: 'esewa');
+                      print('[DEBUG] Booking ID returned: $bookingId');
                       if (bookingId != null) {
                         await _startEsewaPayment(amount: _totalPrice, bookingId: bookingId, context: context);
+                      } else {
+                        // Show dialog if booking fails or form is invalid
+                        await showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Booking Not Created'),
+                            content: const Text('Booking could not be created. Please check all required fields and try again.'),
+                            actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+                          ),
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(

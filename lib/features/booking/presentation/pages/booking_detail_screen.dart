@@ -1,37 +1,122 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/view_model/booking_view_model.dart';
 import 'package:trip_wise_nepal/features/booking/domain/entities/booking_entity.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/state/booking_state.dart';
-import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
-import 'package:trip_wise_nepal/features/booking/presentation/pages/esewa_webview_page.dart';
-import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
+import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
+import 'package:dio/dio.dart';
+import 'dart:convert';
+import 'package:trip_wise_nepal/features/booking/presentation/pages/esewa_webview_page.dart';
 
-class BookingDetailScreen extends ConsumerWidget {
-
-    // Removed simulation. Use real WebView payment below.
+class BookingDetailScreen extends ConsumerStatefulWidget {
   final String bookingId;
-
   const BookingDetailScreen({Key? key, required this.bookingId}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BookingDetailScreen> createState() => _BookingDetailScreenState();
+}
+
+class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
+    Future<void> _refreshBookingAndUpdateUI() async {
+      await ref.read(bookingViewModelProvider.notifier).getBookingById(widget.bookingId);
+      final refreshedBooking = ref.read(bookingViewModelProvider).selectedBooking;
+      if (mounted) setState(() {});
+    }
+  Future<void> _startEsewaPayment({required double amount, required String bookingId, required BuildContext context}) async {
+    try {
+      final dio = Dio();
+      final bookingState = ref.read(bookingViewModelProvider);
+      final booking = bookingState.selectedBooking;
+      final token = '';
+      // If you store token in provider or elsewhere, replace '' with correct value
+      final response = await dio.post(
+        'http://10.0.2.2:5050/api/payment/esewa/initiate',
+        data: {
+          'amount': amount,
+          'bookingId': bookingId,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+      if (response.statusCode == 200 && response.data['esewaUrl'] != null && response.data['formData'] != null) {
+        final esewaUrl = response.data['esewaUrl'] ?? '';
+        dynamic formData = response.data['formData'] ?? {};
+        if (formData is String) {
+          try {
+            formData = Map<String, dynamic>.from(jsonDecode(formData));
+          } catch (e) {}
+        }
+        if (esewaUrl.isNotEmpty && formData is Map && formData.isNotEmpty) {
+          final fields = formData.map((key, value) => MapEntry(key.toString(), value.toString()));
+          final paymentResult = await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => EsewaWebViewPage(
+                formAction: esewaUrl,
+                fields: fields,
+              ),
+            ),
+          );
+          if (paymentResult == true) {
+            try {
+              final transactionUuid = booking?.transactionUuid ?? booking?.transaction_uuid ?? fields['transaction_uuid'] ?? '';
+              final productCode = fields['product_code'] ?? 'EPAYTEST';
+              final totalAmount = fields['total_amount'] ?? amount.toString();
+              if (transactionUuid.isNotEmpty) {
+                final response = await dio.get(
+                  'http://10.0.2.2:5050/api/payment/esewa/success',
+                  queryParameters: {
+                    'product_code': productCode,
+                    'total_amount': totalAmount,
+                    'transaction_uuid': transactionUuid,
+                  },
+                );
+              }
+            } catch (e) {}
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Payment successful!')),
+            );
+            await _refreshBookingAndUpdateUI();
+          } else if (paymentResult == false) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Payment failed or cancelled.')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to initiate eSewa payment. Please try again.')),
+          );
+        }
+      } else {
+        final errorMsg = response.data['message'] ?? 'Failed to initiate eSewa payment.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg)),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error initiating eSewa payment: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bookingState = ref.watch(bookingViewModelProvider);
     final booking = bookingState.selectedBooking;
-    debugPrint('Booking paymentStatus: \\${booking?.paymentStatus}');
-    // If not loaded or wrong booking, fetch
-    if (booking == null || booking.id != bookingId) {
+    if (booking == null || booking.id != widget.bookingId) {
       if (bookingState.status == BookingStatus.error) {
         return Scaffold(
           appBar: AppBar(title: const Text('Booking Detail')),
           body: Center(child: Text(bookingState.errorMessage ?? 'Booking not found.')),
         );
       }
-      // ignore: unused_result
-      Future.microtask(() => ref.read(bookingViewModelProvider.notifier).getBookingById(bookingId));
+      Future.microtask(() => ref.read(bookingViewModelProvider.notifier).getBookingById(widget.bookingId));
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     double basePrice = (booking.totalPrice ?? 0) / 1.13;
@@ -43,7 +128,12 @@ class BookingDetailScreen extends ConsumerWidget {
       }
     }
 
-    // Format expiry if available
+    Future<void> _refreshBookingAndUpdateUI() async {
+      await ref.read(bookingViewModelProvider.notifier).getBookingById(widget.bookingId);
+      final refreshedBooking = ref.read(bookingViewModelProvider).selectedBooking;
+      if (mounted) setState(() {});
+    }
+
     String? expiresAtStr;
     if (booking.expiresAt != null) {
       try {
@@ -51,6 +141,8 @@ class BookingDetailScreen extends ConsumerWidget {
         expiresAtStr = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       } catch (_) {}
     }
+    String paymentStatusRaw = booking.paymentStatus ?? '';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Booking Detail'),
@@ -71,7 +163,7 @@ class BookingDetailScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if ((booking.paymentStatus == null || booking.paymentStatus == 'pending' || booking.paymentStatus == 'unpaid') && expiresAtStr != null) ...[
+            if ((paymentStatusRaw == 'pending' || paymentStatusRaw == 'unpaid') && expiresAtStr != null) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
@@ -113,11 +205,24 @@ class BookingDetailScreen extends ConsumerWidget {
                     if ((booking.status ?? '').isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text('Booking Status: ${booking.status ?? ''}'),
-                      if ((booking.paymentStatus ?? '').isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text('Payment Status: ${booking.paymentStatus ?? ''}'),
-                      ],
                     ],
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Text('Payment Status:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 6),
+                        Text(
+                          paymentStatusRaw,
+                          style: TextStyle(
+                            color: paymentStatusRaw == 'paid'
+                                ? Colors.green
+                                : paymentStatusRaw == 'pending' || paymentStatusRaw == 'unpaid'
+                                    ? Colors.orange
+                                    : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
                     if (booking.specialRequest != null && booking.specialRequest!.trim().isNotEmpty) ...[
                       const SizedBox(height: 8),
                       const Text('Special Request:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -152,7 +257,6 @@ class BookingDetailScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            // Special Requests (field not present in BookingEntity, so skip or add if available in future)
             // Price Summary
             Card(
               child: Padding(
@@ -197,102 +301,24 @@ class BookingDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
             // Payment button for unpaid bookings
-            if (booking.paymentStatus == null || booking.paymentStatus == 'pending' || booking.paymentStatus == 'unpaid') ...[
+            if (paymentStatusRaw == 'pending' || paymentStatusRaw == 'unpaid') ...[
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    final scaffoldMessenger = ScaffoldMessenger.of(context);
-                    try {
-                      print('Starting payment initiation...');
-                      final uri = Uri.parse('http://192.168.101.10:5050/api/payment/esewa/initiate');
-                      print('POST to: ' + uri.toString());
-                      print('POST body: bookingId=' + booking.id);
-                      final response = await http.post(
-                        uri,
-                        headers: {'Content-Type': 'application/json'},
-                        body: jsonEncode({
-                          'bookingId': booking.id,
-                          'amount': booking.totalPrice ?? 0,
-                        }),
-                      );
-                      print('Response status: ' + response.statusCode.toString());
-                      print('Response body: ' + response.body);
-                      if (response.statusCode == 200) {
-                        final data = jsonDecode(response.body);
-                        final formAction = data['esewaUrl'];
-                        final fieldsRaw = data['formData'];
-                        if (formAction == null || fieldsRaw == null) {
-                          await showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Payment Error'),
-                              content: const Text('Invalid payment response from server.'),
-                              actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
-                            ),
-                          );
-                          return;
-                        }
-                        final fields = (fieldsRaw as Map).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
-                        final result = await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (ctx) => EsewaWebViewPage(
-                              formAction: formAction.toString(),
-                              fields: fields,
-                            ),
-                          ),
-                        );
-                        if (result == true) {
-                          // Refresh booking to update payment status
-                          await ref.read(bookingViewModelProvider.notifier).getBookingById(bookingId);
-                          await showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('eSewa Payment'),
-                              content: const Text('Payment Successful!'),
-                              actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
-                            ),
-                          );
-                        } else if (result == false) {
-                          await showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('eSewa Payment'),
-                              content: const Text('Payment Failed or Cancelled.'),
-                              actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
-                            ),
-                          );
-                        }
-                      } else {
-                        debugPrint('Payment initiation failed. Status: ${response.statusCode}');
-                        debugPrint('Response body: ${response.body}');
-                        await showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Payment initiation failed'),
-                            content: Text('Status: ${response.statusCode}\n${response.body}'),
-                            actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
-                          ),
-                        );
-                        scaffoldMessenger.showSnackBar(
-                          SnackBar(content: Text('Payment initiation failed (Status: ${response.statusCode}): ${response.body}')),
-                        );
-                      }
-                    } catch (e, st) {
-                      print('Exception during payment initiation: $e');
-                      print('Stacktrace: $st');
-                      await showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Payment initiation error'),
-                          content: Text('Exception: $e'),
-                          actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
-                        ),
-                      );
-                      scaffoldMessenger.showSnackBar(
-                        SnackBar(content: Text('Payment initiation failed: $e')),
-                      );
-                    }
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => const Center(child: CircularProgressIndicator()),
+                    );
+                    // Directly start eSewa payment flow here
+                    await _startEsewaPayment(
+                      amount: booking.totalPrice,
+                      bookingId: booking.id,
+                      context: context,
+                    );
+                    await _refreshBookingAndUpdateUI();
+                    Navigator.of(context).pop();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF136767),
