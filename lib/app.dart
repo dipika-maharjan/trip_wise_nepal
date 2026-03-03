@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:trip_wise_nepal/app/theme/theme_data.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/pages/reset_password_screen.dart';
 import 'package:app_links/app_links.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:trip_wise_nepal/app/theme/theme_provider.dart';
 
 import 'features/splash/presentation/pages/splash_screen.dart';
 
@@ -78,12 +80,19 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      navigatorKey: navigatorKey,
-      theme: getApplicationTheme(),
-      title: 'TripWise Nepal',
-      home: const SplashScreen(),
+    return Consumer(
+      builder: (context, ref, _) {
+        final themeMode = ref.watch(themeModeProvider);
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          navigatorKey: navigatorKey,
+          theme: getApplicationTheme(),
+          darkTheme: ThemeData.dark(),
+          themeMode: themeMode,
+          title: 'TripWise Nepal',
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }
