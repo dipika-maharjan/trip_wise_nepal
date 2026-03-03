@@ -16,6 +16,8 @@ import 'package:dio/dio.dart';
 import 'package:trip_wise_nepal/features/booking/data/datasources/remote/booking_remote_datasource.dart';
 import 'package:trip_wise_nepal/features/booking/data/repositories/booking_repository.dart';
 
+import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/accommodation_screen.dart';
+
 class BookingListScreen extends ConsumerStatefulWidget {
   const BookingListScreen({Key? key}) : super(key: key);
 
@@ -63,9 +65,17 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                // TODO: Navigate to accommodation booking screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AccommodationScreen(),
+                  ),
+                );
               },
-              child: const Text('Book Accommodation'),
+              child: const Text(
+                'Book Accommodation',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -84,6 +94,7 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
           final guests = booking.guests;
           final roomsBooked = booking.roomsBooked;
           final status = (booking.status.isNotEmpty ? booking.status : 'unknown');
+          final paymentStatus = (booking.paymentStatus ?? '').toLowerCase();
           final totalPrice = booking.totalPrice;
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -152,7 +163,7 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
                             Row(
                               children: [
                                 OutlinedButton(
-                                  onPressed: (status == 'cancelled' || status == 'completed')
+                                  onPressed: (status == 'cancelled' || status == 'completed' || paymentStatus == 'paid')
                                       ? null
                                       : () async {
                                           showDialog(
@@ -209,6 +220,54 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
                                   onPressed: (status == 'cancelled' || status == 'completed')
                                       ? null
                                       : () async {
+                                          // Ask for confirmation before cancelling
+                                          bool proceed = true;
+                                          if (paymentStatus == 'paid') {
+                                            proceed = await showDialog<bool>(
+                                                  context: context,
+                                                  builder: (ctx) => AlertDialog(
+                                                    title: const Text('Cancel Booking?'),
+                                                    content: Text(
+                                                      'You have already completed payment. Cancellation will not refund your payment. Do you still want to cancel your booking for $accommodationName?',
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(ctx).pop(false),
+                                                        child: const Text('No'),
+                                                      ),
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(ctx).pop(true),
+                                                        child: const Text('Yes'),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ) ??
+                                                false;
+                                          } else {
+                                            proceed = await showDialog<bool>(
+                                                  context: context,
+                                                  builder: (ctx) => AlertDialog(
+                                                    title: const Text('Cancel Booking?'),
+                                                    content: Text(
+                                                      'Are you sure you want to cancel your booking for $accommodationName?',
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(ctx).pop(false),
+                                                        child: const Text('No'),
+                                                      ),
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(ctx).pop(true),
+                                                        child: const Text('Yes'),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ) ??
+                                                false;
+                                          }
+
+                                          if (!proceed) return;
+
                                           try {
                                             // Get token from secure storage
                                             const storage = FlutterSecureStorage();

@@ -39,6 +39,45 @@ class BookingFormScreen extends StatefulWidget {
 class _BookingFormScreenState extends State<BookingFormScreen> {
   // ...existing state fields and methods...
 
+  @override
+  void initState() {
+    super.initState();
+    // Prefill form fields when editing an existing booking
+    if (widget.isEdit && widget.booking != null) {
+      final booking = widget.booking;
+
+      // Prefill selected room type
+      RoomTypeEntity? matchedRoomType;
+      for (final rt in widget.roomTypes) {
+        if (rt.id == booking.roomTypeId) {
+          matchedRoomType = rt;
+          break;
+        }
+      }
+      _selectedRoomType = matchedRoomType;
+
+      // Prefill dates and basic fields
+      _checkInDate = booking.checkIn;
+      _checkOutDate = booking.checkOut;
+      _guests = booking.guests;
+      _roomsBooked = booking.roomsBooked;
+      _specialRequest = booking.specialRequest;
+
+      // Prefill optional extras quantities
+      try {
+        final extras = booking.extras;
+        for (final ex in extras) {
+          _extraQuantities[ex.id] = ex.quantity;
+        }
+      } catch (_) {}
+
+      // Recalculate total price after prefill
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _calculateTotalPrice();
+      });
+    }
+  }
+
   Future<void> _startEsewaPayment({required double amount, required String bookingId, required BuildContext context}) async {
     print('[DEBUG] Starting eSewa payment: amount=$amount, bookingId=$bookingId');
     try {
@@ -384,6 +423,13 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     }
     tax = (basePriceTotal + extrasTotal) * (TAX_PERCENT / 100);
 
+    // Determine payment status for edit mode
+    String paymentStatusRaw = '';
+    if (widget.isEdit && widget.booking != null && widget.booking.paymentStatus != null) {
+      paymentStatusRaw = widget.booking.paymentStatus.toString();
+    }
+    final bool isPaid = paymentStatusRaw == 'paid';
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isEdit ? 'Edit Booking' : 'Complete Your Booking'),
@@ -728,82 +774,128 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : () async {
-                      print('[DEBUG] Pay with eSewa button pressed');
-                      final bookingId = await _submit(paymentType: 'esewa');
-                      print('[DEBUG] Booking ID returned: $bookingId');
-                      if (bookingId != null) {
-                        await _startEsewaPayment(amount: _totalPrice, bookingId: bookingId, context: context);
-                      } else {
-                        // Show dialog if booking fails or form is invalid
-                        await showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Booking Not Created'),
-                            content: const Text('Booking could not be created. Please check all required fields and try again.'),
-                            actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF136767),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Confirm Booking and Pay with eSewa',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  if (widget.isEdit) ...[
+                    if (isPaid) ...[
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.lock, color: Colors.orange, size: 24),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                'This booking has already been paid and can no longer be updated.',
+                                style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 15),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.withOpacity(0.2)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-                        const SizedBox(width: 10),
-                        Expanded(
+                    ] else ...[
+                      ElevatedButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                await _submit(paymentType: 'pending');
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF136767),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: const Center(
                           child: Text(
-                            'Your booking will expire 2 hours after creation. Please complete payment before expiry.',
-                            style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 15),
+                            'Update Booking',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : () async {
-                      // Confirm Booking & Pay Later
-                      final bookingId = await _submit(paymentType: 'pending');
-                      if (bookingId != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Booking reserved for 2 hours. Please complete payment before expiry.')),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[700],
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Confirm Booking and Pay Later',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ],
+                  ] else ...[
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : () async {
+                        print('[DEBUG] Pay with eSewa button pressed');
+                        final bookingId = await _submit(paymentType: 'esewa');
+                        print('[DEBUG] Booking ID returned: $bookingId');
+                        if (bookingId != null) {
+                          await _startEsewaPayment(amount: _totalPrice, bookingId: bookingId, context: context);
+                        } else {
+                          // Show dialog if booking fails or form is invalid
+                          await showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Booking Not Created'),
+                              content: const Text('Booking could not be created. Please check all required fields and try again.'),
+                              actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF136767),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'Confirm Booking and Pay with eSewa',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Your booking will expire 2 hours after creation. Please complete payment before expiry.',
+                              style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 15),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : () async {
+                        // Confirm Booking & Pay Later
+                        final bookingId = await _submit(paymentType: 'pending');
+                        if (bookingId != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Booking reserved for 2 hours. Please complete payment before expiry.')),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[700],
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'Confirm Booking and Pay Later',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 24),
