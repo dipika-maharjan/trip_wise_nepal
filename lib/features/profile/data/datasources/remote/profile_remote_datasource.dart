@@ -8,6 +8,9 @@ abstract interface class IProfileRemoteDataSource {
   /// Upload profile image to server
   /// Returns image URL on success
   Future<String> uploadProfileImage(File imageFile);
+
+  /// Update profile name and email
+  Future<bool> updateProfile(String name, String email);
 }
 
 /// Implementation of profile remote data source
@@ -75,6 +78,33 @@ class ProfileRemoteDataSource implements IProfileRemoteDataSource {
       throw Exception('Network error: ${e.message}');
     } catch (e) {
       throw Exception('Error uploading image: $e');
+    }
+  }
+
+  @override
+  Future<bool> updateProfile(String name, String email) async {
+    final token = await _tokenService.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('No auth token found. Please login first.');
+    }
+    final response = await _dio.put(
+      ApiEndpoints.updateProfile,
+      data: {
+        'name': name,
+        'email': email,
+      },
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      throw Exception('Failed to update profile');
     }
   }
 }
