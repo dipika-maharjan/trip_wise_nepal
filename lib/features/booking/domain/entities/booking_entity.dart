@@ -1,6 +1,8 @@
 import 'package:trip_wise_nepal/features/booking/data/models/booking_api_model.dart';
 class BookingEntity {
+    String? get transaction_uuid => transactionUuid;
   final String id;
+  final String? transactionUuid;
   final String accommodationId;
   final String accommodationName;
   final String accommodationImage;
@@ -19,6 +21,7 @@ class BookingEntity {
 
   BookingEntity({
     required this.id,
+    this.transactionUuid,
     required this.accommodationId,
     required this.accommodationName,
     required this.accommodationImage,

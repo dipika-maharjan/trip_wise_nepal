@@ -26,6 +26,8 @@ class BookingRepository {
         status: booking.status,
         extras: booking.extras,
         specialRequest: booking.specialRequest,
+        paymentStatus: booking.paymentStatus,
+        expiresAt: null,
       );
     }).toList() ?? [];
   }
@@ -48,6 +50,8 @@ class BookingRepository {
       status: m.status,
       extras: m.extras,
       specialRequest: m.specialRequest,
+      paymentStatus: m.paymentStatus,
+      expiresAt: null,
     );
   }
 
@@ -69,6 +73,8 @@ class BookingRepository {
       status: m.status,
       extras: m.extras,
       specialRequest: m.specialRequest,
+      paymentStatus: m.paymentStatus,
+      expiresAt: null,
     );
   }
 
