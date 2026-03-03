@@ -101,6 +101,23 @@ class UserSessionService {
     }
   }
 
+  // Update only user display details without touching profile picture
+  Future<void> updateUserDetails({
+    String? fullName,
+    String? email,
+    String? username,
+  }) async {
+    if (fullName != null) {
+      await _prefs.setString(_keyUserFullName, fullName);
+    }
+    if (email != null) {
+      await _prefs.setString(_keyUserEmail, email);
+    }
+    if (username != null) {
+      await _prefs.setString(_keyUserUsername, username);
+    }
+  }
+
   // Clear user session (logout)
   Future<void> clearSession() async {
     await _prefs.remove(_keyIsLoggedIn);
