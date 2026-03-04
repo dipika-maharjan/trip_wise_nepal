@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:trip_wise_nepal/core/services/location_service.dart';
 
 class MapViewModel extends ChangeNotifier {
