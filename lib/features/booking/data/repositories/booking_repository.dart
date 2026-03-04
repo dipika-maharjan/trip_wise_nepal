@@ -1,5 +1,4 @@
 import 'package:trip_wise_nepal/features/booking/data/datasources/booking_datasource.dart';
-import 'package:trip_wise_nepal/features/booking/data/models/booking_api_model.dart';
 import 'package:trip_wise_nepal/features/booking/domain/entities/booking_entity.dart';
 
 class BookingRepository {
@@ -10,7 +9,7 @@ class BookingRepository {
   Future<List<BookingEntity>> getBookings() async {
     final apiModels = await _datasource.getBookings();
     return apiModels?.map((m) {
-      final booking = m as BookingApiModel;
+      final booking = m;
       return BookingEntity(
         id: booking.id,
         accommodationId: booking.accommodationId,

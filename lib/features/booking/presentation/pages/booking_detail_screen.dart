@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/view_model/booking_view_model.dart';
-import 'package:trip_wise_nepal/features/booking/domain/entities/booking_entity.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/state/booking_state.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
-import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
 import 'package:dio/dio.dart';
 import 'dart:convert';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/esewa_webview_page.dart';
 
 class BookingDetailScreen extends ConsumerStatefulWidget {
   final String bookingId;
-  const BookingDetailScreen({Key? key, required this.bookingId}) : super(key: key);
+  const BookingDetailScreen({super.key, required this.bookingId});
 
   @override
   ConsumerState<BookingDetailScreen> createState() => _BookingDetailScreenState();
@@ -128,7 +126,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       }
     }
 
-    Future<void> _refreshBookingAndUpdateUI() async {
+    Future<void> refreshBookingAndUpdateUI() async {
       await ref.read(bookingViewModelProvider.notifier).getBookingById(widget.bookingId);
       final refreshedBooking = ref.read(bookingViewModelProvider).selectedBooking;
       if (mounted) setState(() {});
@@ -197,9 +195,9 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                     const SizedBox(height: 4),
                     Text('Room Type: ${booking.roomTypeName ?? 'N/A'}'),
                     const SizedBox(height: 4),
-                    Text('Check-in: ${booking.checkIn?.toLocal().toString().split(' ')[0] ?? ''}'),
-                    Text('Check-out: ${booking.checkOut?.toLocal().toString().split(' ')[0] ?? ''}'),
-                    Text('Nights: ${booking.checkOut != null && booking.checkIn != null ? booking.checkOut.difference(booking.checkIn).inDays : ''}'),
+                    Text('Check-in: ${booking.checkIn.toLocal().toString().split(' ')[0] ?? ''}'),
+                    Text('Check-out: ${booking.checkOut.toLocal().toString().split(' ')[0] ?? ''}'),
+                    Text('Nights: ${booking.checkIn != null ? booking.checkOut.difference(booking.checkIn).inDays : ''}'),
                     Text('Guests: ${booking.guests.toString()}'),
                     Text('Rooms: ${booking.roomsBooked.toString()}'),
                     if ((booking.status ?? '').isNotEmpty) ...[
@@ -317,7 +315,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                       bookingId: booking.id,
                       context: context,
                     );
-                    await _refreshBookingAndUpdateUI();
+                    await refreshBookingAndUpdateUI();
                     Navigator.of(context).pop();
                   },
                   style: ElevatedButton.styleFrom(

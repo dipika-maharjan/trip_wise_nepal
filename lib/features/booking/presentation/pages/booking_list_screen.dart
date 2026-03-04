@@ -19,7 +19,7 @@ import 'package:trip_wise_nepal/features/booking/data/repositories/booking_repos
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/accommodation_screen.dart';
 
 class BookingListScreen extends ConsumerStatefulWidget {
-  const BookingListScreen({Key? key}) : super(key: key);
+  const BookingListScreen({super.key});
 
   @override
   ConsumerState<BookingListScreen> createState() => _BookingListScreenState();

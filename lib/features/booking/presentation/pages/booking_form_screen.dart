@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_detail_screen.dart';
 import 'dart:convert';
 import 'package:trip_wise_nepal/features/accommodation/domain/entities/room_type_entity.dart';
@@ -20,7 +19,7 @@ class BookingFormScreen extends StatefulWidget {
   final dynamic booking;
 
   const BookingFormScreen({
-    Key? key,
+    super.key,
     required this.accommodationId,
     required this.accommodationName,
     required this.accommodationImage,
@@ -30,7 +29,7 @@ class BookingFormScreen extends StatefulWidget {
     required this.token,
     this.isEdit = false,
     this.booking,
-  }) : super(key: key);
+  });
 
   @override
   State<BookingFormScreen> createState() => _BookingFormScreenState();
@@ -79,7 +78,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   }
 
   Future<void> _startEsewaPayment({required double amount, required String bookingId, required BuildContext context}) async {
-    print('[DEBUG] Starting eSewa payment: amount=$amount, bookingId=$bookingId');
     try {
       final dio = Dio();
       final response = await dio.post(
@@ -96,18 +94,12 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           },
         ),
       );
-      print('[DEBUG] eSewa initiate response: status=${response.statusCode}, data=${response.data}');
       if (response.statusCode == 200 && response.data['esewaUrl'] != null && response.data['formData'] != null) {
         final esewaUrl = response.data['esewaUrl'] ?? '';
         dynamic formData = response.data['formData'] ?? {};
-        print('[DEBUG] esewaUrl: $esewaUrl');
-        print('[DEBUG] formData: $formData');
-        print('[DEBUG] formData type: ${formData.runtimeType}');
-        print('[DEBUG] esewaUrl.isNotEmpty: ${esewaUrl.isNotEmpty}');
 
         // If formData is a String, try to decode as JSON
         if (formData is String) {
-          print('[DEBUG] formData is String, attempting to decode as JSON');
           try {
             formData = Map<String, dynamic>.from(jsonDecode(formData));
             print('[DEBUG] Decoded formData: $formData');
@@ -121,7 +113,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         print('[DEBUG] formData.isNotEmpty: ${(formData is Map) ? formData.isNotEmpty : 'N/A'}');
 
         if (esewaUrl.isNotEmpty && formData is Map && formData.isNotEmpty) {
-          print('[DEBUG] formData keys: ${formData.keys}');
           if (esewaUrl.contains('localhost') || esewaUrl.contains('127.0.0.1')) {
             await showDialog(
               context: context,
@@ -151,7 +142,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                 final transactionUuid = latestBooking?.transactionUuid ?? latestBooking?.transaction_uuid ?? fields['transaction_uuid'] ?? '';
                 final productCode = fields['product_code'] ?? 'EPAYTEST';
                 final totalAmount = fields['total_amount'] ?? amount.toString();
-                print('[DEBUG] Using transactionUuid for payment confirmation: $transactionUuid');
                 if (transactionUuid.isNotEmpty) {
                   final dio = Dio();
                   final response = await dio.get(
@@ -168,7 +158,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                 }
               } catch (e) {
                 print('[DEBUG] Error sending payment confirmation GET: $e');
-                if (e is DioError) {
+                if (e is DioException) {
                   print('[DEBUG] DioError details: response=${e.response}, type=${e.type}, message=${e.message}');
                 }
               }
@@ -236,7 +226,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   DateTime? _checkOutDate;
   int _guests = 1;
   int _roomsBooked = 1;
-  Map<String, int> _extraQuantities = {};
+  final Map<String, int> _extraQuantities = {};
   String? _specialRequest;
   double _totalPrice = 0.0;
   String? _error;
@@ -312,7 +302,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     };
 
     try {
-      print('[DEBUG] Booking payload: $payload');
       final dio = Dio();
       late Response response;
       if (widget.isEdit && widget.booking != null && widget.booking.id != null) {
@@ -342,7 +331,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           ),
         );
       }
-      print('[DEBUG] Booking response: ${response.statusCode} ${response.data}');
       final isSuccess = (widget.isEdit ? response.statusCode == 200 : response.statusCode == 201) && response.data['success'] == true;
       if (isSuccess) {
         final bookingId = widget.isEdit
@@ -371,14 +359,12 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       }
     } catch (e) {
       if (e is DioException && e.response != null) {
-        print('[DEBUG] Booking error response: ${e.response?.data}');
         final errorMsg = e.response?.data['message']?.toString() ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.');
         setState(() { _error = errorMsg; });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMsg)),
         );
       } else {
-        print('[DEBUG] Booking error: $e');
         final errorMsg = (widget.isEdit ? 'Update failed: ' : 'Booking failed: ') + e.toString();
         setState(() { _error = errorMsg; });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -393,16 +379,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Debug print for roomTypes
-    print('[DEBUG] Room types passed to BookingFormScreen:');
-    for (final rt in widget.roomTypes) {
-      print('  - \\${rt.name} | isActive: \\${rt.isActive} | pricePerNight: \\${rt.pricePerNight}');
-    }
-    // Debug print for optionalExtras
-    print('[DEBUG] Optional extras passed to BookingFormScreen:');
-    for (final ex in widget.optionalExtras) {
-      print('  - \\${ex.name} | isActive: \\${ex.isActive} | price: \\${ex.price}');
-    }
     double basePriceTotal = 0.0;
     double extrasTotal = 0.0;
     double tax = 0.0;
@@ -490,7 +466,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               DropdownButtonFormField<RoomTypeEntity>(
                 isExpanded: true,
                 decoration: const InputDecoration(hintText: 'Choose a room type'),
-                value: _selectedRoomType,
+                initialValue: _selectedRoomType,
                 items: widget.roomTypes
                     .where((rt) => rt.isActive == true && rt.pricePerNight > 0)
                     .map((rt) => DropdownMenuItem<RoomTypeEntity>(
@@ -692,7 +668,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                 ...widget.optionalExtras
                     .where((e) => e.isActive == true)
                     .map((e) {
-                      final extra = e as OptionalExtraApiModel;
+                      final extra = e;
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 4),
                         child: Padding(
@@ -713,7 +689,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('${extra.name}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    Text(extra.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                                     Text('Rs. ${extra.price.toStringAsFixed(2)} per ${extra.priceType == 'per_person' ? 'person' : 'booking'}'),
                                     if (extra.description.isNotEmpty)
                                       Padding(
@@ -750,7 +726,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                         ),
                       );
                     })
-                    .toList(),
+                    ,
               ]
               else if (widget.isEdit) ...[
                 const Text('No optional extras available for this booking.', style: TextStyle(color: Colors.grey)),
@@ -821,9 +797,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                   ] else ...[
                     ElevatedButton(
                       onPressed: _isLoading ? null : () async {
-                        print('[DEBUG] Pay with eSewa button pressed');
                         final bookingId = await _submit(paymentType: 'esewa');
-                        print('[DEBUG] Booking ID returned: $bookingId');
                         if (bookingId != null) {
                           await _startEsewaPayment(amount: _totalPrice, bookingId: bookingId, context: context);
                         } else {
@@ -927,7 +901,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                               ],
                             ),
                           );
-                        }).toList(),
+                        }),
                         const SizedBox(height: 4),
                         Text('Extras Total: Rs. ${extrasTotal.toStringAsFixed(2)}'),
                       ] else ...[
