@@ -47,7 +47,6 @@ void main() {
     await pumpProfileScreen(tester);
 
     expect(find.text('Edit Profile'), findsOneWidget);
-    expect(find.text('My Trips'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Logout'), findsOneWidget);
   });

@@ -6,7 +6,7 @@ import 'package:trip_wise_nepal/features/profile/presentation/view_model/profile
 class EditProfileScreen extends ConsumerStatefulWidget {
   final String initialName;
   final String initialEmail;
-  const EditProfileScreen({Key? key, required this.initialName, required this.initialEmail}) : super(key: key);
+  const EditProfileScreen({super.key, required this.initialName, required this.initialEmail});
 
   @override
   ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();

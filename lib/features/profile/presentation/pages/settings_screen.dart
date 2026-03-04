@@ -4,10 +4,9 @@ import 'package:trip_wise_nepal/app/theme/theme_provider.dart';
 import 'package:trip_wise_nepal/core/services/storage/user_session_service.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/state/auth_state.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/view_model/auth_view_model.dart';
-import 'package:trip_wise_nepal/features/auth/presentation/pages/login_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -50,7 +49,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 class ChangePasswordScreenWithValidation extends ConsumerStatefulWidget {
-  const ChangePasswordScreenWithValidation({Key? key}) : super(key: key);
+  const ChangePasswordScreenWithValidation({super.key});
 
   @override
   ConsumerState<ChangePasswordScreenWithValidation> createState() => _ChangePasswordScreenWithValidationState();
