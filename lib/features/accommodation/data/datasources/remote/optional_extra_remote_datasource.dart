@@ -1,6 +1,5 @@
 import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extra_api_model.dart';
 import 'package:trip_wise_nepal/core/api/api_client.dart';
-import 'package:trip_wise_nepal/core/api/api_endpoints.dart';
 
 class OptionalExtraRemoteDatasource {
   final ApiClient _apiClient;

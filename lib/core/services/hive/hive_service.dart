@@ -42,7 +42,6 @@ class HiveService {
 
   // box open
   Future<void> _openBoxes() async {
-    print('[DEBUG] HiveService._openBoxes: Opening authBox');
     await Hive.openBox<AuthHiveModel>(HiveTableConstant.authTable);
     print('[DEBUG] HiveService._openBoxes: authBox opened, keys = ${Hive.box<AuthHiveModel>(HiveTableConstant.authTable).keys.toList()}');
   }
@@ -71,10 +70,8 @@ class HiveService {
       final user = _authBox.values.firstWhere(
         (user) => user.email == email && user.password == password,
       );
-      print('[DEBUG] HiveService.login: found user = $user');
       return user;
     } catch (e) {
-      print('[DEBUG] HiveService.login: no user found for $email');
       return null;
     }
   }
@@ -82,7 +79,6 @@ class HiveService {
   // Get user by ID
   AuthHiveModel? getUserById(String authId) {
     final user = _authBox.get(authId);
-    print('[DEBUG] HiveService.getUserById: authId = $authId, user = $user');
     return user;
   }
 

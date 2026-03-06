@@ -1,18 +1,14 @@
-
 import 'package:trip_wise_nepal/features/accommodation/presentation/view_model/map_view_model.dart';
 import 'package:trip_wise_nepal/core/services/location_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/state/review_notifier.dart';
 import 'package:trip_wise_nepal/features/accommodation/data/services/review_service.dart';
-import 'package:trip_wise_nepal/features/accommodation/presentation/state/review_state.dart';
 import 'package:dio/dio.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:trip_wise_nepal/core/utils/snackbar_utils.dart';
-import 'package:trip_wise_nepal/features/accommodation/presentation/state/accommodation_state.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/utils/image_url_helper.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/view_model/accommodation_view_model.dart';
 import 'package:trip_wise_nepal/features/accommodation/domain/entities/room_type_entity.dart';
@@ -41,11 +37,25 @@ class _AccommodationDetailScreenState
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      ref
-          .read(accommodationViewModelProvider.notifier)
-          .getAccommodationById(widget.accommodationId);
+    Future.microtask(() async {
+      ref.read(accommodationViewModelProvider.notifier).getAccommodationById(widget.accommodationId);
+      await _fetchRoomTypes();
+      await _fetchOptionalExtras();
     });
+  }
+
+  Future<void> _fetchRoomTypes() async {
+    setState(() { _roomTypesLoading = true; _roomTypesError = null; });
+    try {
+      final apiClient = ApiClient();
+      final ds = RoomTypeRemoteDataSource(apiClient: apiClient);
+      final types = await ds.getRoomTypesByAccommodationId(widget.accommodationId);
+      setState(() { _roomTypes = types; });
+    } catch (e) {
+      setState(() { _roomTypesError = 'Failed to load room types'; });
+    } finally {
+      setState(() { _roomTypesLoading = false; });
+    }
   }
 
   MapViewModel? _mapViewModel;
@@ -66,7 +76,7 @@ class _AccommodationDetailScreenState
   int? _editingIndex;
   int? _editingRating;
   String? _editingComment;
-  String _reviewSort = 'Latest';
+  final String _reviewSort = 'Latest';
   List<RoomTypeEntity> _roomTypes = [];
   bool _roomTypesLoading = false;
   String? _roomTypesError;
@@ -89,7 +99,6 @@ class _AccommodationDetailScreenState
         _optionalExtras = extras;
       });
     } catch (e) {
-      print('[DEBUG] Optional extras fetch error: $e');
       setState(() {
         _optionalExtrasError = 'Failed to load optional extras';
       });
@@ -149,14 +158,6 @@ class _AccommodationDetailScreenState
   Widget build(BuildContext context) {
     final accommodationState = ref.watch(accommodationViewModelProvider);
     final accommodation = accommodationState.selectedAccommodation;
-
-    // Debug print for diagnosis
-    // ignore: avoid_print
-    print('[DEBUG] accommodation: '
-        '${accommodation != null ? accommodation.toString() : 'null'}');
-    // ignore: avoid_print
-    print('[DEBUG] accommodation.location: '
-        '${accommodation != null ? accommodation.location.toString() : 'null'}');
 
     if (accommodation == null) {
       return Scaffold(
@@ -448,9 +449,7 @@ class _AccommodationDetailScreenState
                         builder: (context, _) {
                           final lat = accommodation.location!.lat;
                           final lng = accommodation.location!.lng;
-                          // ignore: avoid_print
-                          print('[DEBUG] Map marker lat: $lat, lng: $lng');
-                          final isValid = lat != null && lng != null &&
+                          final isValid = lng != null &&
                               lat.isFinite && lng.isFinite &&
                               !lat.isNaN && !lng.isNaN;
                           final accLoc = isValid
@@ -503,12 +502,8 @@ class _AccommodationDetailScreenState
                                 ),
                               ),
                             );
-                            // ignore: avoid_print
-                            print('[DEBUG] Invalid accommodation coordinates, fallback marker at (0,0)');
                           }
                           if (_mapViewModel!.userLocation != null) {
-                            
-                            print('[DEBUG] User marker: ${_mapViewModel!.userLocation}');
                             markers.add(
                               Marker(
                                 point: _mapViewModel!.userLocation!,
@@ -733,24 +728,14 @@ class _AccommodationDetailScreenState
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _roomTypesLoading
+                            onPressed: _roomTypesLoading || _optionalExtrasLoading || _roomTypes.isEmpty
                                 ? null
                                 : () async {
-                                    final storage =
-                                        const FlutterSecureStorage();
-                                    final token =
-                                        await storage.read(key: 'auth_token') ??
-                                        '';
-                                    print('[DEBUG] Booking token: $token');
+                                    final storage = const FlutterSecureStorage();
+                                    final token = await storage.read(key: 'auth_token') ?? '';
                                     if (token.isEmpty) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'No valid token found. Please log in again.',
-                                          ),
-                                        ),
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('No valid token found. Please log in again.')),
                                       );
                                       return;
                                     }
@@ -758,17 +743,12 @@ class _AccommodationDetailScreenState
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => BookingFormScreen(
-                                          accommodationId:
-                                              accommodation.id ?? '',
+                                          accommodationId: accommodation.id ?? '',
                                           accommodationName: accommodation.name,
-                                          accommodationImage:
-                                              (accommodation.images.isNotEmpty)
-                                              ? ImageUrlHelper.buildImageUrl(
-                                                  accommodation.images[0],
-                                                )
+                                          accommodationImage: (accommodation.images.isNotEmpty)
+                                              ? ImageUrlHelper.buildImageUrl(accommodation.images[0])
                                               : '',
-                                          accommodationLocation:
-                                              accommodation.address,
+                                          accommodationLocation: accommodation.address,
                                           roomTypes: _roomTypes,
                                           optionalExtras: _optionalExtras,
                                           token: token,
@@ -780,7 +760,7 @@ class _AccommodationDetailScreenState
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: const Color(0xFF136767),
                             ),
-                            child: _roomTypesLoading
+                            child: (_roomTypesLoading || _optionalExtrasLoading)
                                 ? const SizedBox(
                                     height: 20,
                                     width: 20,
@@ -838,9 +818,6 @@ class _AccommodationDetailScreenState
     final accommodation = accommodationState.selectedAccommodation;
     final authState = ref.watch(authViewModelProvider);
     final user = authState.user;
-    print(
-      '[DEBUG] ReviewSection: authState.status = \\${authState.status}, user = \\${user?.authId}, authState.user = \\${authState.user}',
-    );
     final reviewState = ref.watch(
       reviewNotifierProvider(accommodation?.id ?? ''),
     );
@@ -859,7 +836,7 @@ class _AccommodationDetailScreenState
     bool isLoggedIn =
         user != null && authState.status == AuthStatus.authenticated;
     bool hasReviewed =
-        isLoggedIn && reviewState.reviews.any((r) => r.userId == user!.authId);
+        isLoggedIn && reviewState.reviews.any((r) => r.userId == user.authId);
 
     // Review form state
     int? editingIndex = _editingIndex;
@@ -1056,7 +1033,7 @@ class _AccommodationDetailScreenState
                   separatorBuilder: (_, __) => const Divider(height: 24),
                   itemBuilder: (context, i) {
                     final review = reviewState.reviews[i];
-                    final isOwn = isLoggedIn && review.userId == user?.authId;
+                    final isOwn = isLoggedIn && review.userId == user.authId;
                     final isEditing = editingIndex == i;
                     if (isEditing) {
                       return buildReviewForm(

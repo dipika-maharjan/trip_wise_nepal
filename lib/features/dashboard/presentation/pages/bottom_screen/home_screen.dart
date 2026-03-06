@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/view_model/booking_view_model.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/view_model/accommodation_view_model.dart';
-import 'package:trip_wise_nepal/features/booking/presentation/state/booking_state.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/state/accommodation_state.dart';
 import 'package:trip_wise_nepal/features/booking/domain/entities/booking_entity.dart';
 import 'package:trip_wise_nepal/features/accommodation/domain/entities/accommodation_entity.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/utils/image_url_helper.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/pages/accommodation_detail_screen.dart';
-import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form_screen.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_list_screen.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen/accommodation_screen.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_detail_screen.dart';
@@ -22,7 +20,7 @@ String formatDate(DateTime date) {
 const String kImageBaseUrl = 'http://10.0.2.2:5050'; // Updated to match backend base URL
 
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -214,7 +212,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               // Recent Bookings
               Text('Recent Bookings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0c7272))),
               const SizedBox(height: 8),
-              ...recentBookings.map((b) => RecentBookingCard(booking: b)).toList(),
+              ...recentBookings.map((b) => RecentBookingCard(booking: b)),
 
               // Action Buttons
               const SizedBox(height: 32),
@@ -280,7 +278,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 class _ForYouSection extends StatelessWidget {
   final List<AccommodationEntity> accommodations;
   final bool loading;
-  const _ForYouSection({Key? key, required this.accommodations, required this.loading}) : super(key: key);
+  const _ForYouSection({super.key, required this.accommodations, required this.loading});
 
   @override
   Widget build(BuildContext context) {
@@ -376,7 +374,7 @@ class _ForYouSection extends StatelessWidget {
                                 const SizedBox(height: 4),
                                 Text(acc.address, style: const TextStyle(fontSize: 12, color: Color(0xFF0c7272)), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 const SizedBox(height: 4),
-                                Container(
+                                SizedBox(
                                   width: double.infinity,
                                   child: Text(
                                     acc.overview,
@@ -406,7 +404,7 @@ class _ForYouSection extends StatelessWidget {
 // Upcoming Booking Card
 class UpcomingBookingCard extends StatelessWidget {
   final BookingEntity booking;
-  const UpcomingBookingCard({Key? key, required this.booking}) : super(key: key);
+  const UpcomingBookingCard({super.key, required this.booking});
 
   @override
   Widget build(BuildContext context) {
@@ -444,7 +442,7 @@ class UpcomingBookingCard extends StatelessWidget {
 // Recent Booking Card
 class RecentBookingCard extends StatelessWidget {
   final BookingEntity booking;
-  const RecentBookingCard({Key? key, required this.booking}) : super(key: key);
+  const RecentBookingCard({super.key, required this.booking});
 
   @override
   Widget build(BuildContext context) {

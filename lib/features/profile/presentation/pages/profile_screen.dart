@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:trip_wise_nepal/app/routes/app_routes.dart';
 import 'package:trip_wise_nepal/app/theme/app_colors.dart';
 import 'package:trip_wise_nepal/core/services/storage/user_session_service.dart';
 import 'package:trip_wise_nepal/features/accommodation/presentation/utils/image_url_helper.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/pages/login_screen.dart';
 import 'package:trip_wise_nepal/features/auth/presentation/view_model/auth_view_model.dart';
+import 'package:trip_wise_nepal/features/profile/presentation/pages/edit_profile_screen.dart';
+import 'package:trip_wise_nepal/features/profile/presentation/pages/settings_screen.dart';
 import 'package:trip_wise_nepal/features/profile/presentation/view_model/profile_viewmodel.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -61,12 +62,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final profilePictureUrl = userSessionService.getCurrentUserProfilePicture();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // header
+              // header restored: title, profile image, name, email
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -98,14 +99,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Text(
                       userName,
                       style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 8),
 
-                    //user email
+                    const SizedBox(height: 4),
+
+                    // user email
                     Text(
                       userEmail,
                       style: const TextStyle(
@@ -121,7 +123,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SizedBox(height: 24),
 
-              
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
                 child: Column(
@@ -130,34 +131,98 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _buildMenuButton(
                       icon: Icons.person_outline_rounded,
                       title: 'Edit Profile',
-                      onTap: () {},
+                      onTap: () async {
+                        final userSessionService = ref.read(userSessionServiceProvider);
+                        final userName = userSessionService.getCurrentUserFullName() ?? '';
+                        final userEmail = userSessionService.getCurrentUserEmail() ?? '';
+                        final result = await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => EditProfileScreen(
+                              initialName: userName,
+                              initialEmail: userEmail,
+                            ),
+                          ),
+                        );
+                        if (mounted && result == true) {
+                          setState(() {});
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Profile updated')),
+                          );
+                        }
+                      },
                     ),
                     const SizedBox(height: 12),
 
-                    // My Trips Button
-                    _buildMenuButton(
-                      icon: Icons.history_rounded,
-                      title: 'My Trips',
-                      onTap: () {},
-                    ),
+                    // ...removed My Trips Button...
                     const SizedBox(height: 12),
 
                     // Settings Button
                     _buildMenuButton(
                       icon: Icons.settings_outlined,
                       title: 'Settings',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsScreen(),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 12),
 
                     // Logout Button
                     _buildMenuButton(
-                      icon: Icons.logout_rounded,
+                      icon: Icons.logout,
                       title: 'Logout',
-                      iconColor: AppColors.error,
-                      titleColor: AppColors.error,
-                      onTap: () => _showLogoutDialog(),
+                      onTap: () async {
+                        showDialog(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: const Text('Logout'),
+                            content: const Text('Are you sure you want to logout?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogContext),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () async {
+                                  Navigator.pop(dialogContext);
+                                  // Clear user session
+                                  await ref.read(authViewModelProvider.notifier).logout();
+                                  if (context.mounted) {
+                                    // Replace with your login screen navigation
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                      (route) => false,
+                                    );
+                                  }
+                                },
+                                child: const Text(
+                                  'Logout',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
+                    const SizedBox(height: 12),
+
+                    // Remove Image Button
+                    // _buildMenuButton(
+                    //   icon: Icons.delete,
+                    //   title: 'Remove Photo',
+                    //   onTap: () {
+                    //     Navigator.pop(context);
+                    //     _removeImage();
+                    //   },
+                    // ),
+                    const SizedBox(height: 10),
                   ],
                 ),
               ),
@@ -589,7 +654,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               // Clear user session
               await ref.read(authViewModelProvider.notifier).logout();
               if (context.mounted) {
-                AppRoutes.pushAndRemoveUntil(context, const LoginScreen());
+                // Replace with your login screen navigation
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
               }
             },
             child: const Text(

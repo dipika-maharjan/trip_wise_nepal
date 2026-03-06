@@ -6,7 +6,7 @@ import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_scr
 
 class BottomScreenLayout extends StatefulWidget {
   final int initialIndex;
-  const BottomScreenLayout({Key? key, this.initialIndex = 0}) : super(key: key);
+  const BottomScreenLayout({super.key, this.initialIndex = 0});
 
   @override
   State<BottomScreenLayout> createState() => _BottomScreenLayoutState();

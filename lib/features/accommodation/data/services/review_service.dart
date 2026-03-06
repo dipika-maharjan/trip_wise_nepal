@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trip_wise_nepal/core/api/api_client.dart';
-import 'package:trip_wise_nepal/core/api/api_endpoints.dart';
 
 final reviewServiceProvider = Provider<ReviewService>((ref) {
   final apiClient = ref.read(apiClientProvider);

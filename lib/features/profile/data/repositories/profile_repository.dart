@@ -9,6 +9,7 @@ import 'package:trip_wise_nepal/features/profile/data/datasources/remote/profile
 
 abstract interface class IProfileRepository {
   Future<Either<Failure, String>> uploadProfileImage(File imageFile);
+  Future<Either<Failure, bool>> updateProfile(String name, String email);
 }
 
 // Provider
@@ -59,6 +60,16 @@ class ProfileRepository implements IProfileRepository {
       return Right(imageUrl);
     } catch (e) {
       return Left(ApiFailure(message: 'Failed to upload image: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> updateProfile(String name, String email) async {
+    try {
+      final result = await _profileRemoteDataSource.updateProfile(name, email);
+      return Right(result);
+    } catch (e) {
+      return Left(ApiFailure(message: e.toString()));
     }
   }
 }

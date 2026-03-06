@@ -33,6 +33,7 @@ class BookingApiModel {
   final String status;
   final List<BookingExtra> extras;
   final String? specialRequest;
+  final String? paymentStatus;
 
   BookingApiModel({
     required this.id,
@@ -49,6 +50,7 @@ class BookingApiModel {
     required this.status,
     required this.extras,
     this.specialRequest,
+    this.paymentStatus,
   });
 
   factory BookingApiModel.fromJson(Map<String, dynamic> json) {
@@ -95,6 +97,7 @@ class BookingApiModel {
       status: json['bookingStatus'] ?? json['status'] ?? '',
       extras: extrasList,
       specialRequest: json['specialRequest'],
+      paymentStatus: json['paymentStatus'],
     );
   }
 }
