@@ -5,6 +5,7 @@ import 'package:trip_wise_nepal/features/booking/presentation/state/booking_stat
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 import 'package:dio/dio.dart';
 import 'dart:convert';
+import 'package:trip_wise_nepal/core/api/api_endpoints.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/esewa_webview_page.dart';
 
 class BookingDetailScreen extends ConsumerStatefulWidget {
@@ -29,7 +30,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       final token = '';
       // If you store token in provider or elsewhere, replace '' with correct value
       final response = await dio.post(
-        'http://10.0.2.2:5050/api/payment/esewa/initiate',
+        '${ApiEndpoints.baseUrl}/payment/esewa/initiate',
         data: {
           'amount': amount,
           'bookingId': bookingId,
@@ -67,7 +68,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
               final totalAmount = fields['total_amount'] ?? amount.toString();
               if (transactionUuid.isNotEmpty) {
                 final response = await dio.get(
-                  'http://10.0.2.2:5050/api/payment/esewa/success',
+                  '${ApiEndpoints.baseUrl}/payment/esewa/success',
                   queryParameters: {
                     'product_code': productCode,
                     'total_amount': totalAmount,

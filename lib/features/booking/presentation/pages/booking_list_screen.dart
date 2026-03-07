@@ -9,6 +9,7 @@ import 'package:trip_wise_nepal/features/booking/presentation/pages/booking_form
 import 'package:trip_wise_nepal/features/accommodation/domain/entities/room_type_entity.dart';
 import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extra_api_model.dart';
 import 'package:trip_wise_nepal/core/api/api_client.dart';
+import 'package:trip_wise_nepal/core/api/api_endpoints.dart';
 import 'package:trip_wise_nepal/features/accommodation/data/datasources/remote/room_type_remote_datasource.dart';
 import 'package:trip_wise_nepal/features/accommodation/data/datasources/remote/optional_extra_remote_datasource.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -274,7 +275,7 @@ class _BookingListScreenState extends ConsumerState<BookingListScreen> {
                                             final token = await storage.read(key: 'auth_token') ?? '';
                                             final dio = Dio();
                                             final response = await dio.patch(
-                                              'http://10.0.2.2:5050/api/bookings/${booking.id}/cancel',
+                                              '${ApiEndpoints.baseUrl}/bookings/${booking.id}/cancel',
                                               options: Options(
                                                 headers: {
                                                   'Authorization': 'Bearer $token',

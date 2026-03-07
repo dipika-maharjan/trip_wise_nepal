@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:trip_wise_nepal/features/accommodation/domain/entities/room_type_entity.dart';
 import 'package:trip_wise_nepal/features/accommodation/data/models/optional_extra_api_model.dart';
 import 'package:dio/dio.dart';
+import 'package:trip_wise_nepal/core/api/api_endpoints.dart';
 import 'package:trip_wise_nepal/features/booking/presentation/pages/esewa_webview_page.dart';
 import 'package:trip_wise_nepal/features/dashboard/presentation/pages/bottom_screen_layout.dart';
 
@@ -81,7 +82,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     try {
       final dio = Dio();
       final response = await dio.post(
-        'http://10.0.2.2:5050/api/payment/esewa/initiate',
+        '${ApiEndpoints.baseUrl}/payment/esewa/initiate',
         data: {
           'amount': amount,
           'bookingId': bookingId,
@@ -145,7 +146,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                 if (transactionUuid.isNotEmpty) {
                   final dio = Dio();
                   final response = await dio.get(
-                    'http://10.0.2.2:5050/api/payment/esewa/success',
+                    '${ApiEndpoints.baseUrl}/payment/esewa/success',
                     queryParameters: {
                       'product_code': productCode,
                       'total_amount': totalAmount,
@@ -307,7 +308,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       if (widget.isEdit && widget.booking != null && widget.booking.id != null) {
         // Update booking (PATCH)
         response = await dio.patch(
-          "http://10.0.2.2:5050/api/bookings/${widget.booking.id}",
+          "${ApiEndpoints.baseUrl}/bookings/${widget.booking.id}",
           data: payload,
           options: Options(
             headers: {
@@ -320,7 +321,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       } else {
         // Create booking (POST)
         response = await dio.post(
-          "http://10.0.2.2:5050/api/bookings",
+          "${ApiEndpoints.baseUrl}/bookings",
           data: payload,
           options: Options(
             headers: {
@@ -333,6 +334,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       }
       final isSuccess = (widget.isEdit ? response.statusCode == 200 : response.statusCode == 201) && response.data['success'] == true;
       if (isSuccess) {
+        if (!mounted) return null;
         final bookingId = widget.isEdit
             ? widget.booking.id
             : response.data['data']?['booking']?['_id']?.toString();
@@ -340,6 +342,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         // Always navigate to BottomScreenLayout with booking tab selected so bottom navigation is present
         if (paymentType == 'pending') {
           Future.delayed(const Duration(milliseconds: 500), () {
+            if (!mounted) return;
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(
                 builder: (context) => BottomScreenLayout(initialIndex: 2),
@@ -350,6 +353,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         }
         return bookingId;
       } else {
+        if (!mounted) return null;
         final errorMsg = response.data['message'] ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.');
         setState(() { _error = errorMsg; });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -358,6 +362,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         return null;
       }
     } catch (e) {
+      if (!mounted) return null;
       if (e is DioException && e.response != null) {
         final errorMsg = e.response?.data['message']?.toString() ?? (widget.isEdit ? 'Update failed.' : 'Booking failed.');
         setState(() { _error = errorMsg; });
@@ -373,7 +378,9 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       }
       return null;
     } finally {
-      setState(() { _isLoading = false; });
+      if (mounted) {
+        setState(() { _isLoading = false; });
+      }
     }
   }
 

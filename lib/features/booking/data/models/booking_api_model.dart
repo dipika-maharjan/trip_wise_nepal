@@ -66,7 +66,7 @@ class BookingApiModel {
       if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
         imageUrl = rawImage;
       } else {
-        imageUrl = 'http://10.0.2.2:5050$rawImage';
+        imageUrl = 'http://192.168.101.9:5050$rawImage';
       }
     }
     // Defensive: ensure extras is a List<Map<String, dynamic>>
