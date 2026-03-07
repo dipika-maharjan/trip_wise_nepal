@@ -42,8 +42,14 @@ class AuthRemoteDatasource implements IAuthRemoteDataSource {
       // Backend may return only {success, token} with no user payload.
       final rawUser = response.data['data'] ?? response.data['user'];
 
-      final token = response.data['token'];
-      if (token != null) {
+      var token = response.data['token'];
+      if (token is String) {
+        // Normalize token in case backend returns value like "Bearer <jwt>"
+        const bearerPrefix = 'Bearer ';
+        if (token.startsWith(bearerPrefix)) {
+          token = token.substring(bearerPrefix.length);
+        }
+
         await _tokenService.saveToken(token);
         // Also save to FlutterSecureStorage for Dio AuthInterceptor
         const storage = FlutterSecureStorage();
