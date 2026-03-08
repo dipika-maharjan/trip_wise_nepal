@@ -29,4 +29,8 @@ class HiveTableConstant {
   // Favorites
   static const int favoriteTypeId = 5;
   static const String favoriteTable = "favorite_table";
+
+  // Caches (no typeIds needed, store JSON maps)
+  static const String accommodationsCacheTable = "accommodations_cache_table";
+  static const String bookingsCacheTable = "bookings_cache_table";
 }

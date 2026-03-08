@@ -44,6 +44,10 @@ class HiveService {
   Future<void> _openBoxes() async {
     await Hive.openBox<AuthHiveModel>(HiveTableConstant.authTable);
     print('[DEBUG] HiveService._openBoxes: authBox opened, keys = ${Hive.box<AuthHiveModel>(HiveTableConstant.authTable).keys.toList()}');
+    
+    // Open cache boxes for offline data
+    await Hive.openBox(HiveTableConstant.accommodationsCacheTable);
+    await Hive.openBox(HiveTableConstant.bookingsCacheTable);
   }
 
   // box close
@@ -113,5 +117,43 @@ class HiveService {
   // Clear all users (for testing)
   Future<void> clearAllUsers() async {
     await _authBox.clear();
+  }
+  
+  // ======================= Offline Cache =========================
+  
+  Box get _accommodationsCacheBox =>
+      Hive.box(HiveTableConstant.accommodationsCacheTable);
+  
+  Box get _bookingsCacheBox =>
+      Hive.box(HiveTableConstant.bookingsCacheTable);
+  
+  Future<void> cacheAccommodations(List<Map<String, dynamic>> items) async {
+    await _accommodationsCacheBox.put('items', items);
+  }
+  
+  List<Map<String, dynamic>> getCachedAccommodations() {
+    final data = _accommodationsCacheBox.get('items');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    }
+    return [];
+  }
+  
+  Future<void> cacheBookings(List<Map<String, dynamic>> items) async {
+    await _bookingsCacheBox.put('items', items);
+  }
+  
+  List<Map<String, dynamic>> getCachedBookings() {
+    final data = _bookingsCacheBox.get('items');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    }
+    return [];
   }
 }
