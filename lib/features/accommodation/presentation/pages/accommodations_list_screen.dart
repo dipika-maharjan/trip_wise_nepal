@@ -304,31 +304,58 @@ class _AccommodationsListScreenState
       onRefresh: () async {
         _handleClearFilters();
       },
-      child: GridView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.75,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-        ),
-        itemCount: state.accommodations.length +
-            (state.hasMore && state.status == AccommodationStatus.loading ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == state.accommodations.length) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: CircularProgressIndicator(
-                  color: Color(0xFF136767),
-                ),
-              ),
-            );
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          int crossAxisCount;
+          double childAspectRatio;
+
+          // Make grid responsive for phones and tablets
+          if (width >= 1200) {
+            // Large tablet / desktop
+            crossAxisCount = 4;
+            childAspectRatio = 1.35; // shorter cards
+          } else if (width >= 900) {
+            // Medium tablet
+            crossAxisCount = 3;
+            childAspectRatio = 1.25;
+          } else if (width >= 600) {
+            // Small tablets / large phones
+            crossAxisCount = 2;
+            childAspectRatio = 1.1;
+          } else {
+            // Phones: 2-column grid like before, with moderate height
+            crossAxisCount = 2;
+            childAspectRatio = 1.0;
           }
 
-          final accommodation = state.accommodations[index];
-          return _buildAccommodationCard(accommodation);
+          return GridView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(16),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: childAspectRatio,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            itemCount: state.accommodations.length +
+                (state.hasMore && state.status == AccommodationStatus.loading ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == state.accommodations.length) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF136767),
+                    ),
+                  ),
+                );
+              }
+
+              final accommodation = state.accommodations[index];
+              return _buildAccommodationCard(accommodation);
+            },
+          );
         },
       ),
     );
@@ -355,14 +382,14 @@ class _AccommodationsListScreenState
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(12),
               ),
-              child: accommodation.images.isNotEmpty
+                child: accommodation.images.isNotEmpty
                   ? CachedNetworkImage(
-                      imageUrl: ImageUrlHelper.buildImageUrl(accommodation.images[0]),
-                      height: 120,
+                    imageUrl: ImageUrlHelper.buildImageUrl(accommodation.images[0]),
+                    height: 80,
                       width: double.infinity,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
-                        height: 120,
+                        height: 80,
                         color: Colors.grey[200],
                         child: const Center(
                           child: CircularProgressIndicator(
@@ -371,7 +398,7 @@ class _AccommodationsListScreenState
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        height: 120,
+                        height: 80,
                         color: Colors.grey[300],
                         child: const Icon(
                           Icons.hotel,
@@ -380,8 +407,8 @@ class _AccommodationsListScreenState
                         ),
                       ),
                     )
-                  : Container(
-                      height: 120,
+                    : Container(
+                      height: 80,
                       color: Colors.grey[300],
                       child: const Icon(
                         Icons.hotel,
@@ -394,7 +421,7 @@ class _AccommodationsListScreenState
             // Details
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -417,35 +444,32 @@ class _AccommodationsListScreenState
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
                     if (accommodation.rating != null)
-                      Flexible(
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              size: 16,
-                              color: Colors.amber,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              accommodation.rating!.toStringAsFixed(1),
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            if (accommodation.totalReviews != null)
-                              Flexible(
-                                child: Text(
-                                  ' (${accommodation.totalReviews})',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            size: 16,
+                            color: Colors.amber,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            accommodation.rating!.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          if (accommodation.totalReviews != null)
+                            Expanded(
+                              child: Text(
+                                ' (${accommodation.totalReviews})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                          ],
-                        ),
+                            ),
+                        ],
                       ),
                     const SizedBox(height: 4),
                   ],

@@ -17,7 +17,7 @@ String formatDate(DateTime date) {
 }
 
 // Place this after imports, before any class definitions:
-const String kImageBaseUrl = 'http://10.0.2.2:5050'; // Updated to match backend base URL
+const String kImageBaseUrl = 'http://192.168.101.9:5050';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -292,106 +292,129 @@ class _ForYouSection extends StatelessWidget {
         if (!loading && accommodations.isEmpty)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: Text('No accommodations found. Try searching or check back later!', style: TextStyle(color: Colors.grey)))),
         if (!loading && accommodations.isNotEmpty)
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.1,
-            ),
-            itemCount: accommodations.length > 6 ? 6 : accommodations.length,
-            itemBuilder: (context, index) {
-              final acc = accommodations[index];
-              final img = acc.images.isNotEmpty ? acc.images[0] : '';
-              Widget imageWidget;
-              if (img.isNotEmpty && (img.startsWith('http') || img.startsWith('https') || img.startsWith('/uploads/'))) {
-                imageWidget = Image.network(
-                  ImageUrlHelper.buildImageUrl(img),
-                  height: 100,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 100,
-                    width: double.infinity,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.broken_image, size: 40),
-                  ),
-                );
-              } else if (img.isNotEmpty) {
-                final assetPath = img.startsWith('assets/') ? img : 'assets/images/$img';
-                imageWidget = Image.asset(
-                  assetPath,
-                  height: 100,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 100,
-                    width: double.infinity,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.broken_image, size: 40),
-                  ),
-                );
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              int crossAxisCount = 2;
+              double childAspectRatio;
+
+              // Make cards taller on small phones, flatter on larger screens
+              if (width < 400) {
+                childAspectRatio = 0.9; // taller cards for narrow phones
+              } else if (width < 800) {
+                childAspectRatio = 1.3; // mid-size
               } else {
-                imageWidget = Container(
-                  height: 100,
-                  width: double.infinity,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.hotel, size: 40),
-                );
+                childAspectRatio = 1.8; // compact on tablets
               }
-              return AspectRatio(
-                aspectRatio: 1.1,
-                child: Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 2,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AccommodationDetailScreen(accommodationId: acc.id ?? ''),
-                        ),
-                      );
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                          child: imageWidget,
-                        ),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 4),
-                                Text(acc.address, style: const TextStyle(fontSize: 12, color: Color(0xFF0c7272)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 4),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: Text(
-                                    acc.overview,
-                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+
+              final itemCount = accommodations.length > 6 ? 6 : accommodations.length;
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: childAspectRatio,
+                ),
+                itemCount: itemCount,
+                itemBuilder: (context, index) {
+                  final acc = accommodations[index];
+                  final img = acc.images.isNotEmpty ? acc.images[0] : '';
+                  Widget imageWidget;
+                  if (img.isNotEmpty && (img.startsWith('http') || img.startsWith('https') || img.startsWith('/uploads/'))) {
+                    imageWidget = Image.network(
+                      ImageUrlHelper.buildImageUrl(img),
+                      height: 80,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 80,
+                        width: double.infinity,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.broken_image, size: 40),
+                      ),
+                    );
+                  } else if (img.isNotEmpty) {
+                    final assetPath = img.startsWith('assets/') ? img : 'assets/images/$img';
+                    imageWidget = Image.asset(
+                      assetPath,
+                      height: 80,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 80,
+                        width: double.infinity,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.broken_image, size: 40),
+                      ),
+                    );
+                  } else {
+                    imageWidget = Container(
+                      height: 80,
+                      width: double.infinity,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.hotel, size: 32),
+                    );
+                  }
+
+                  return Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 2,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AccommodationDetailScreen(accommodationId: acc.id ?? ''),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                            child: imageWidget,
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    acc.name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    softWrap: false,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    acc.address,
+                                    style: const TextStyle(fontSize: 12, color: Color(0xFF0c7272)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    acc.overview,
+                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
             },
           ),
